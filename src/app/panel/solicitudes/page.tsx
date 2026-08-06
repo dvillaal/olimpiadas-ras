@@ -1,0 +1,230 @@
+import type { Metadata } from 'next';
+import { requireGroup } from '@/lib/auth/session';
+import { createClient } from '@/lib/supabase/server';
+import { intergroupStatusView } from '@/lib/domain/status';
+import { formatRelative } from '@/lib/utils';
+import { Alert, Badge, EmptyState, PageHeader, Panel, StatusBadge } from '@/components/ui';
+import { RealtimeRefresher } from '@/components/realtime-refresher';
+import { NewRequestForm } from './new-request-form';
+import { ProposeForm } from './propose-form';
+import { ResolveButtons } from './resolve-buttons';
+
+export const metadata: Metadata = { title: 'Solicitudes intergrupales' };
+
+export default async function GroupIntergroupPage() {
+  const { group } = await requireGroup();
+  const supabase = await createClient();
+
+  const [
+    { data: requests },
+    { data: teams },
+    { data: teamMembers },
+    { data: sports },
+    { data: groups },
+    { data: participants },
+    { data: proposals },
+  ] = await Promise.all([
+    supabase
+      .from('intergroup_requests')
+      .select('*')
+      .or(`requester_group_id.eq.${group.id},target_group_id.eq.${group.id}`)
+      .order('created_at', { ascending: false }),
+    supabase.from('teams').select('*'),
+    supabase.from('team_members').select('team_id, role, participant_id'),
+    supabase.from('sports').select('*'),
+    supabase.from('groups').select('id, name, code').eq('status', 'approved'),
+    supabase.from('participants').select('*').eq('active', true),
+    supabase.from('intergroup_proposals').select('*'),
+  ]);
+
+  const sportById = new Map((sports ?? []).map((s) => [s.id, s]));
+  const groupById = new Map((groups ?? []).map((g) => [g.id, g]));
+  const teamById = new Map((teams ?? []).map((t) => [t.id, t]));
+  const participantById = new Map((participants ?? []).map((p) => [p.id, p]));
+
+  const rows = requests ?? [];
+  const sent = rows.filter((r) => r.requester_group_id === group.id);
+  const received = rows.filter((r) => r.target_group_id === group.id);
+
+  // Equipos propios incompletos: los únicos que justifican pedir apoyo.
+  const incompleteTeams = (teams ?? [])
+    .filter((team) => team.owner_group_id === group.id)
+    .map((team) => {
+      const sport = sportById.get(team.sport_id);
+      const starters = (teamMembers ?? []).filter(
+        (m) => m.team_id === team.id && m.role === 'starter',
+      ).length;
+      return {
+        id: team.id,
+        name: team.name,
+        sportName: sport?.name ?? '',
+        allowIntergroup: sport?.allow_intergroup ?? false,
+        missing: (sport?.team_size ?? 0) - starters,
+        maxExternal: sport?.max_external ?? 0,
+      };
+    })
+    .filter((team) => team.allowIntergroup && team.missing > 0);
+
+  const otherGroups = (groups ?? [])
+    .filter((g) => g.id !== group.id)
+    .map((g) => ({ id: g.id, name: g.name }));
+
+  const myParticipants = (participants ?? [])
+    .filter((p) => p.group_id === group.id)
+    .map((p) => ({ id: p.id, fullName: p.full_name, branch: p.branch_id }));
+
+  return (
+    <>
+      <RealtimeRefresher groupId={group.id} tables={['intergroup_requests', 'teams']} announce={false} />
+
+      <PageHeader
+        title="Solicitudes intergrupales"
+        description="Cuando te falten participantes para completar un equipo, pide apoyo a otro grupo scout."
+      />
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <div className="space-y-5">
+          <Panel
+            title="Pedir apoyo"
+            description="Solo aparecen los equipos incompletos que admiten integrantes externos."
+          >
+            {incompleteTeams.length === 0 ? (
+              <EmptyState
+                icon="✅"
+                title="No necesitas apoyo"
+                description="Todos tus equipos están completos o no admiten integrantes de otros grupos."
+              />
+            ) : (
+              <NewRequestForm teams={incompleteTeams} groups={otherGroups} />
+            )}
+          </Panel>
+
+          <Panel title={`Solicitudes enviadas (${sent.length})`}>
+            {sent.length === 0 ? (
+              <EmptyState icon="📤" title="Todavía no has pedido apoyo" />
+            ) : (
+              <ul className="space-y-3">
+                {sent.map((request) => {
+                  const team = teamById.get(request.team_id);
+                  const proposed = (proposals ?? []).filter((p) => p.request_id === request.id);
+
+                  return (
+                    <li key={request.id} className="rounded-2xl border border-line p-4">
+                      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <b className="text-navy">{groupById.get(request.target_group_id)?.name}</b>
+                          <p className="text-sm text-slate-500">
+                            {team?.name} · {request.slots_requested} cupo(s) ·{' '}
+                            {formatRelative(request.created_at)}
+                          </p>
+                        </div>
+                        <StatusBadge status={intergroupStatusView(request.status)} />
+                      </div>
+
+                      {request.message && (
+                        <p className="mb-2 text-sm text-slate-600">{request.message}</p>
+                      )}
+
+                      {request.status === 'proposed' && (
+                        <>
+                          <p className="mb-2 text-sm font-semibold text-navy">
+                            Participantes propuestos:
+                          </p>
+                          <ul className="mb-3 flex flex-wrap gap-1.5">
+                            {proposed.map((proposal) => (
+                              <li key={proposal.participant_id}>
+                                <Badge tone="blue">
+                                  {participantById.get(proposal.participant_id)?.full_name ?? '—'}
+                                </Badge>
+                              </li>
+                            ))}
+                          </ul>
+                          {request.response_note && (
+                            <p className="mb-3 rounded-lg bg-canvas p-2 text-sm text-slate-600">
+                              {request.response_note}
+                            </p>
+                          )}
+                          <ResolveButtons requestId={request.id} />
+                        </>
+                      )}
+
+                      {request.status === 'pending' && (
+                        <p className="text-sm text-slate-500">
+                          Esperando que el otro grupo proponga participantes.
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
+        </div>
+
+        <Panel title={`Solicitudes recibidas (${received.length})`}>
+          {received.length === 0 ? (
+            <EmptyState
+              icon="📥"
+              title="Ningún grupo te ha pedido apoyo"
+              description="Cuando otro grupo necesite participantes, aparecerá aquí."
+            />
+          ) : (
+            <ul className="space-y-3">
+              {received.map((request) => {
+                const team = teamById.get(request.team_id);
+                const sport = team ? sportById.get(team.sport_id) : undefined;
+                const proposed = (proposals ?? [])
+                  .filter((p) => p.request_id === request.id)
+                  .map((p) => p.participant_id);
+
+                return (
+                  <li key={request.id} className="rounded-2xl border border-line p-4">
+                    <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <b className="text-navy">
+                          {groupById.get(request.requester_group_id)?.name}
+                        </b>
+                        <p className="text-sm text-slate-500">
+                          {sport?.icon} {sport?.name} · necesita {request.slots_requested}{' '}
+                          participante(s)
+                        </p>
+                      </div>
+                      <StatusBadge status={intergroupStatusView(request.status)} />
+                    </div>
+
+                    {request.message && (
+                      <p className="mb-3 rounded-lg bg-canvas p-2 text-sm text-slate-600">
+                        {request.message}
+                      </p>
+                    )}
+
+                    {request.status === 'pending' || request.status === 'proposed' ? (
+                      <ProposeForm
+                        requestId={request.id}
+                        maxSlots={request.slots_requested}
+                        participants={myParticipants}
+                        selectedIds={proposed}
+                        alreadyProposed={request.status === 'proposed'}
+                      />
+                    ) : (
+                      <p className="text-sm text-slate-500">
+                        {request.status === 'accepted'
+                          ? 'Tus participantes fueron integrados al equipo solicitante.'
+                          : 'Esta solicitud ya se cerró.'}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+      </div>
+
+      <Alert tone="info" className="mt-5">
+        Una persona prestada sigue perteneciendo a su grupo de origen y cuenta dentro de su límite
+        de deportes. El equipo que la recibe es el responsable del pago de esa inscripción.
+      </Alert>
+    </>
+  );
+}

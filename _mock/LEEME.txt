@@ -1,0 +1,46 @@
+OLIMPIADAS SCOUTS · SISTEMA LOCAL
+================================
+
+1. Abra index.html con Google Chrome o Microsoft Edge.
+2. No necesita instalar programas ni tener conexión a internet.
+3. La información se guarda en el navegador del computador donde se use.
+4. Los comprobantes se guardan en IndexedDB dentro del mismo navegador.
+5. Use Reportes y respaldo para descargar una copia completa periódicamente.
+
+ACCESOS DE DEMOSTRACIÓN
+-----------------------
+Administrador
+Usuario: admin
+Contraseña: Scout2026!
+
+Grupo Scout Horizonte
+Usuario: horizonte
+Contraseña: 1234
+
+Grupo Scout Cóndores
+Usuario: condores
+Contraseña: 1234
+
+TARIFAS INICIALES
+-----------------
+Deporte individual: $5.000 COP por participante.
+Stand de ventas: $50.000 COP.
+Deporte grupal: $0 inicialmente porque el valor entregado fue "0 mil pesos".
+El administrador debe definir el valor real en Configuración antes de habilitar el pago de equipos grupales.
+
+CUENTA PARA PAGOS
+-----------------
+Cuenta Bancaria RAS
+Ahorros Bancolombia
+Número: 10322142743
+NIT: 890904933-6
+Titular: Corporación Región Antioquia Scout
+
+PLANTILLAS
+----------
+- plantilla_participantes.xlsx: archivo con instrucciones y listas desplegables.
+- plantilla_participantes.csv: archivo plano compatible con Excel y con la carga de la aplicación.
+
+IMPORTANTE
+----------
+Esta es una aplicación local. Para que varios grupos entren al mismo tiempo desde diferentes dispositivos y compartan información en tiempo real, será necesario publicar una versión web con base de datos central.

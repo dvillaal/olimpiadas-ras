@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancela ejecuciones anteriores del mismo PR: solo interesa la última.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Tipos, estilo, pruebas y compilación
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Verificar tipos
+        run: npm run typecheck
+
+      - name: Revisar estilo
+        run: npm run lint
+
+      - name: Validar migraciones SQL
+        run: npm run db:validate
+
+      - name: Ejecutar pruebas
+        run: npm test
+
+      - name: Compilar
+        run: npm run build
+        env:
+          # Valores ficticios: el build solo necesita que las variables existan.
+          NEXT_PUBLIC_SUPABASE_URL: https://ejemplo.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: clave-de-prueba
+          SUPABASE_SERVICE_ROLE_KEY: clave-de-servicio-de-prueba
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
