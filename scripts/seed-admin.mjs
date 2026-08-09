@@ -30,7 +30,10 @@ async function loadEnv() {
 
 await loadEnv();
 
-const [email, password, fullName = 'Administrador General'] = process.argv.slice(2);
+const [email, password, ...nameParts] = process.argv.slice(2);
+// `npm run` reparte los argumentos por espacios, así que "David Villa" llega
+// como dos. Se vuelven a unir en lugar de quedarse solo con el primero.
+const fullName = nameParts.join(' ').trim() || 'Administrador General';
 
 if (!email || !password) {
   console.error('Uso: node scripts/seed-admin.mjs <correo> <contraseña> [nombre]');
@@ -42,11 +45,38 @@ if (password.length < 10) {
   process.exit(1);
 }
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!url || !key) {
-  console.error('Faltan NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY.');
+if (!rawUrl || !key) {
+  console.error(
+    'Faltan NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en tu .env.local.\n' +
+      'Están en Supabase → Project Settings → API.',
+  );
+  process.exit(1);
+}
+
+/**
+ * El panel de Supabase muestra varias direcciones parecidas. La *Data API URL*
+ * termina en `/rest/v1/`, pero el cliente necesita solo el origen; si se cuela
+ * la ruta, el gateway responde «Invalid path specified in request URL».
+ */
+let url;
+try {
+  const parsed = new URL(rawUrl.trim().replace(/^["']|["']$/g, ''));
+  url = parsed.origin;
+  if (parsed.pathname !== '/' && parsed.pathname !== '') {
+    console.warn(
+      `Aviso: NEXT_PUBLIC_SUPABASE_URL incluía la ruta "${parsed.pathname}". ` +
+        `Se usará solo ${url}.\n` +
+        'Corrígela en .env.local para evitar problemas en la aplicación.',
+    );
+  }
+} catch {
+  console.error(
+    `NEXT_PUBLIC_SUPABASE_URL no es una dirección válida: "${rawUrl}".\n` +
+      'Debe verse como https://xxxxxxxx.supabase.co',
+  );
   process.exit(1);
 }
 
@@ -66,6 +96,12 @@ const { data: created, error } = await supabase.auth.admin.createUser({
 if (error) {
   if (!error.message.toLowerCase().includes('already')) {
     console.error(`No se pudo crear la cuenta: ${error.message}`);
+    if (error.message.toLowerCase().includes('invalid path')) {
+      console.error(
+        '\nCausa habitual: NEXT_PUBLIC_SUPABASE_URL trae una ruta extra.\n' +
+          `Debe ser solo el dominio, por ejemplo ${url}`,
+      );
+    }
     process.exit(1);
   }
   // Ya existía: se busca su id para asegurar el perfil.

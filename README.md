@@ -59,13 +59,13 @@ Las llaves están en **Project Settings → API**:
 Con la [CLI de Supabase](https://supabase.com/docs/guides/cli):
 
 ```bash
+npx supabase login
 npx supabase link --project-ref <tu-project-ref>
-npx supabase db push          # aplica supabase/migrations/
-npx supabase db execute --file supabase/seed.sql
+npm run db:seed               # aplica migrations/ y luego seed.sql
 ```
 
-O, si prefieres el panel web: abre el **SQL Editor** y ejecuta en orden los archivos
-de `supabase/migrations/` y luego `supabase/seed.sql`.
+O, si prefieres el panel web: abre el **SQL Editor** y ejecuta en orden los cinco
+archivos de `supabase/migrations/` y luego `supabase/seed.sql`.
 
 El seed carga 195 países, las cuatro ramas scouts, cinco deportes de ejemplo y la
 configuración inicial del evento. Es idempotente: puedes volver a ejecutarlo sin
@@ -179,6 +179,9 @@ _mock/                   Prototipo original, como referencia
 | `npm run lint` | ESLint |
 | `npm test` | Todas las pruebas |
 | `npm run db:validate` | Valida las migraciones contra un Postgres en WebAssembly |
+| `npm run db:link` | Enlaza la carpeta con tu proyecto de Supabase |
+| `npm run db:push` | Aplica las migraciones al proyecto enlazado |
+| `npm run db:seed` | Aplica migraciones y carga los datos iniciales |
 | `npm run db:types` | Regenera `src/types/database.ts` desde el proyecto enlazado |
 | `npm run seed:admin` | Crea la cuenta de administrador |
 

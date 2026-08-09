@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { supabaseAnonKey, supabaseUrl } from './env';
 import type { Database } from '@/types/database';
 
 /**
@@ -9,10 +10,7 @@ import type { Database } from '@/types/database';
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  return createServerClient<Database>(supabaseUrl(), supabaseAnonKey(), {
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -26,8 +24,7 @@ export async function createClient() {
             // Un Server Component no puede escribir cookies. El middleware ya
             // se encargó de refrescar la sesión, así que ignorarlo es correcto.
           }
-        },
       },
     },
-  );
+  });
 }

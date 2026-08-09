@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { supabaseServiceKey, supabaseUrl } from './env';
 import type { Database } from '@/types/database';
 
 /**
@@ -9,14 +10,7 @@ import type { Database } from '@/types/database';
  * ejecutar el seed. NUNCA debe importarse desde un componente de cliente.
  */
 export function createAdminClient() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) {
-    throw new Error(
-      'Falta SUPABASE_SERVICE_ROLE_KEY. Cópiala desde Supabase → Project Settings → API.',
-    );
-  }
-
-  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, {
+  return createClient<Database>(supabaseUrl(), supabaseServiceKey(), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

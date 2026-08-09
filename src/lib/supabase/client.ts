@@ -1,6 +1,7 @@
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
+import { supabaseAnonKey, supabaseUrl } from './env';
 import type { Database } from '@/types/database';
 
 /**
@@ -11,8 +12,5 @@ import type { Database } from '@/types/database';
  * a diferencia del prototipo donde bastaba editar `session` en la consola.
  */
 export function createClient() {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  return createBrowserClient<Database>(supabaseUrl(), supabaseAnonKey());
 }
