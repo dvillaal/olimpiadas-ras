@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { internalRoute } from '@/lib/routes';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/email/send';
 import {
@@ -54,8 +55,9 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     return { errors: { _: 'Correo o contraseña incorrectos.' } };
   }
 
-  const next = String(formData.get('siguiente') ?? '');
-  redirect(next.startsWith('/') ? next : '/');
+  // `internalRoute` descarta destinos externos: sin eso, `?siguiente=//sitio.com`
+  // sacaría al usuario del sistema justo después de escribir su contraseña.
+  redirect(internalRoute(String(formData.get('siguiente') ?? '')));
 }
 
 export async function logoutAction(): Promise<void> {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { Route } from 'next';
 import { cn } from '@/lib/utils';
 
 /**
@@ -11,7 +12,8 @@ import { cn } from '@/lib/utils';
  */
 
 export interface NavItem {
-  href: string;
+  /** `Route` obliga a que la ruta exista, gracias a `typedRoutes`. */
+  href: Route;
   icon: string;
   label: string;
   badge?: number;

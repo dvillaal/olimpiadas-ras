@@ -156,7 +156,7 @@ src/
 │   ├── supabase/        Clientes de navegador, servidor y servicio
 │   └── validation/      Esquemas Zod
 ├── types/database.ts    Tipos del esquema
-└── middleware.ts        Refresco de sesión y protección de rutas
+└── proxy.ts             Refresco de sesión y protección de rutas
 
 supabase/
 ├── migrations/          Esquema, funciones, RLS, storage y realtime
@@ -189,12 +189,13 @@ _mock/                   Prototipo original, como referencia
 
 ## Pruebas
 
-93 pruebas en cinco archivos:
+102 pruebas en seis archivos:
 
 - `tests/fees.test.ts` — tarifas y estados de inscripción.
 - `tests/eligibility.test.ts` — elegibilidad, alineaciones y cupos.
 - `tests/import.test.ts` — analizador de CSV, fechas y validación fila por fila.
 - `tests/env.test.ts` — normalización de la URL de Supabase.
+- `tests/routes.test.ts` — rutas internas y prevención de redirección abierta.
 - `tests/database.test.ts` — **el esquema real**: las migraciones se aplican sobre
   PGlite (PostgreSQL compilado a WebAssembly) y se comprueba que los disparadores y
   restricciones rechacen lo que deben. No requiere base de datos remota.

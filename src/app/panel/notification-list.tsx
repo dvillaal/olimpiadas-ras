@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useTransition } from 'react';
 import { markNotificationsReadAction } from './actions';
 import { Button } from '@/components/ui';
+import { internalRoute } from '@/lib/routes';
 
 export interface NotificationItem {
   id: string;
@@ -59,7 +60,7 @@ export function NotificationList({
             <li key={notification.id}>
               {notification.link ? (
                 <Link
-                  href={notification.link}
+                  href={internalRoute(notification.link)}
                   className="flex gap-3 rounded-lg p-1 transition-colors hover:bg-canvas"
                 >
                   {content}
