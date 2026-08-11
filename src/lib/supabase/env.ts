@@ -34,8 +34,19 @@ export function normalizeSupabaseUrl(raw: string): string {
   return url.origin;
 }
 
-function required(name: string, hint: string): string {
-  const value = process.env[name];
+/**
+ * `value` se recibe ya leído por el llamador (`process.env.NEXT_PUBLIC_X`
+ * escrito literalmente en cada función de abajo), en vez de indexar
+ * `process.env[name]` aquí dentro.
+ *
+ * La diferencia no es cosmética: Next.js reemplaza las variables
+ * `NEXT_PUBLIC_*` en el paquete del navegador buscando ese texto exacto en el
+ * código fuente durante la compilación — `process` ni siquiera existe en el
+ * cliente en tiempo de ejecución. Un acceso dinámico como `process.env[name]`
+ * no es algo que el compilador pueda encontrar, así que nunca se sustituye y
+ * la variable llega vacía al navegador sin importar qué haya en `.env`.
+ */
+function required(name: string, value: string | undefined, hint: string): string {
   if (!value || value.trim() === '') {
     throw new Error(`Falta la variable ${name} en tu archivo .env.local.\n  ${hint}`);
   }
@@ -46,6 +57,7 @@ export function supabaseUrl(): string {
   return normalizeSupabaseUrl(
     required(
       'NEXT_PUBLIC_SUPABASE_URL',
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
       'Cópiala de Supabase → Project Settings → API → Project URL (solo el dominio).',
     ),
   );
@@ -54,6 +66,7 @@ export function supabaseUrl(): string {
 export function supabaseAnonKey(): string {
   return required(
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     'Cópiala de Supabase → Project Settings → API → Project API keys → anon public.',
   );
 }
@@ -61,6 +74,7 @@ export function supabaseAnonKey(): string {
 export function supabaseServiceKey(): string {
   return required(
     'SUPABASE_SERVICE_ROLE_KEY',
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
     'Cópiala de Supabase → Project Settings → API → Project API keys → service_role. Nunca la publiques.',
   );
 }

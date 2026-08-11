@@ -104,14 +104,27 @@ if (error) {
     }
     process.exit(1);
   }
-  // Ya existía: se busca su id para asegurar el perfil.
+  // Ya existía: se busca su id para actualizar la contraseña y el perfil.
   const { data: list } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   userId = list?.users.find((user) => user.email?.toLowerCase() === email.toLowerCase())?.id;
   if (!userId) {
     console.error('La cuenta existe pero no fue posible localizarla.');
     process.exit(1);
   }
-  console.log('La cuenta ya existía; se actualizará su perfil.');
+
+  // Sin esto, volver a correr el script con una contraseña nueva no cambiaba
+  // nada: la cuenta se quedaba con la clave de la primera corrida, y el
+  // administrador terminaba con "Correo o contraseña incorrectos" sin saber
+  // por qué, porque la contraseña que cree tener nunca se guardó.
+  const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+    password,
+    email_confirm: true,
+  });
+  if (updateError) {
+    console.error(`No se pudo actualizar la contraseña: ${updateError.message}`);
+    process.exit(1);
+  }
+  console.log('La cuenta ya existía; se actualizó su contraseña y su perfil.');
 } else {
   userId = created.user.id;
 }
