@@ -27,7 +27,7 @@ sincronización en tiempo real entre dispositivos.
 
 ### 1. Requisitos
 
-- Node.js 20 o superior
+- Node.js **22 o superior** (lo exige `@supabase/supabase-js`)
 - Una cuenta de [Supabase](https://supabase.com) (el plan gratuito basta para empezar)
 - Una cuenta de [Resend](https://resend.com) para los correos (opcional en desarrollo)
 
@@ -189,11 +189,12 @@ _mock/                   Prototipo original, como referencia
 
 ## Pruebas
 
-86 pruebas en cuatro archivos:
+93 pruebas en cinco archivos:
 
 - `tests/fees.test.ts` — tarifas y estados de inscripción.
 - `tests/eligibility.test.ts` — elegibilidad, alineaciones y cupos.
 - `tests/import.test.ts` — analizador de CSV, fechas y validación fila por fila.
+- `tests/env.test.ts` — normalización de la URL de Supabase.
 - `tests/database.test.ts` — **el esquema real**: las migraciones se aplican sobre
   PGlite (PostgreSQL compilado a WebAssembly) y se comprueba que los disparadores y
   restricciones rechacen lo que deben. No requiere base de datos remota.
