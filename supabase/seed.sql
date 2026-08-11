@@ -9,11 +9,16 @@
 insert into public.settings (id) values (true) on conflict (id) do nothing;
 
 -- ─── Ramas scouts ────────────────────────────────────────────────────────────
-insert into public.branches (id, name, sort_order) values
-  ('manada',     'Manada',     1),
-  ('tropa',      'Tropa',      2),
-  ('caminantes', 'Caminantes', 3),
-  ('rovers',     'Rovers',     4)
+-- Las siete ramas reales del movimiento, con el rango de edad que la aplicación
+-- valida al inscribir a cada participante.
+insert into public.branches (id, name, sort_order, min_age, max_age, description) values
+  ('cachorros', 'Cachorros',               1,  5,  6, 'Niños y niñas entre los 5 y los 6 años.'),
+  ('lobatos',   'Lobatos',                 2,  7, 10, 'Niños y niñas entre los 7 y los 10 años.'),
+  ('webelos',   'Webelos',                 3, 10, 11, 'Niños y niñas entre los 10 y los 11 años.'),
+  ('scouts',    'Scouts',                  4, 11, 14, 'Jóvenes entre los 11 y los 14 años.'),
+  ('nomadas',   'Nómadas Scout',           5, 15, 17, 'Jóvenes entre los 15 y los 17 años.'),
+  ('rovers',    'Rovers',                  6, 18, 20, 'Jóvenes adultos entre los 18 y los 20 años.'),
+  ('adultos',   'Consejeros y Dirigentes', 7, 21, 99, 'Consejeros y dirigentes de 21 años en adelante.')
 on conflict (id) do nothing;
 
 -- ─── Países ──────────────────────────────────────────────────────────────────
@@ -222,23 +227,31 @@ on conflict (code) do nothing;
 insert into public.sports (
   slug, name, icon, type, description, category, team_size, substitutes,
   max_teams_per_group, max_sports_per_participant, deadline, fee,
-  allow_intergroup, max_external, sort_order
+  allow_intergroup, max_external, sort_order,
+  -- Cómo se mide y se ordena el resultado. En los relevos y en atletismo gana
+  -- el tiempo más bajo; en los demás, el número más alto.
+  session_capacity, result_label, result_order
 ) values
   ('futbol', 'Fútbol', '⚽', 'group',
    'Competencia por equipos en cancha reglamentaria.', 'Mixta',
-   5, 2, 2, 3, '2026-12-01', null, true, 3, 1),
+   5, 2, 2, 3, '2026-12-01', null, true, 3, 1,
+   2, 'Goles', 'desc'),
   ('carrera-relevos', 'Carrera de relevos', '🏃', 'group',
    'Prueba de velocidad y coordinación por postas.', 'Abierta',
-   4, 1, 2, 3, '2026-12-01', null, true, 2, 2),
+   4, 1, 2, 3, '2026-12-01', null, true, 2, 2,
+   2, 'Tiempo', 'asc'),
   ('voleibol', 'Voleibol', '🏐', 'group',
    'Competencia por equipos en cancha de arena.', 'Mixta',
-   6, 2, 1, 2, '2026-12-01', null, true, 3, 3),
+   6, 2, 1, 2, '2026-12-01', null, true, 3, 3,
+   2, 'Puntos', 'desc'),
   ('atletismo-100m', 'Atletismo 100 m', '🏁', 'individual',
    'Prueba individual de velocidad.', 'Individual',
-   1, 0, 1, 3, '2026-12-01', null, false, 0, 4),
+   1, 0, 1, 3, '2026-12-01', null, false, 0, 4,
+   8, 'Tiempo (segundos)', 'asc'),
   ('ajedrez', 'Ajedrez', '♟️', 'individual',
    'Competencia individual por sistema suizo.', 'Individual',
-   1, 0, 1, 3, '2026-12-01', null, false, 0, 5)
+   1, 0, 1, 3, '2026-12-01', null, false, 0, 5,
+   12, 'Puntos', 'desc')
 on conflict (slug) do nothing;
 
 -- ─── Ramas habilitadas por deporte ───────────────────────────────────────────
@@ -246,21 +259,27 @@ insert into public.sport_branches (sport_id, branch_id)
 select s.id, b.branch_id
 from public.sports s
 join (values
-  ('futbol',          'tropa'),
-  ('futbol',          'caminantes'),
+  ('futbol',          'scouts'),
+  ('futbol',          'nomadas'),
   ('futbol',          'rovers'),
-  ('carrera-relevos', 'manada'),
-  ('carrera-relevos', 'tropa'),
-  ('carrera-relevos', 'caminantes'),
+  ('futbol',          'adultos'),
+  ('carrera-relevos', 'lobatos'),
+  ('carrera-relevos', 'webelos'),
+  ('carrera-relevos', 'scouts'),
+  ('carrera-relevos', 'nomadas'),
   ('carrera-relevos', 'rovers'),
-  ('voleibol',        'caminantes'),
+  ('voleibol',        'nomadas'),
   ('voleibol',        'rovers'),
-  ('atletismo-100m',  'tropa'),
-  ('atletismo-100m',  'caminantes'),
+  ('voleibol',        'adultos'),
+  ('atletismo-100m',  'scouts'),
+  ('atletismo-100m',  'nomadas'),
   ('atletismo-100m',  'rovers'),
-  ('ajedrez',         'manada'),
-  ('ajedrez',         'tropa'),
-  ('ajedrez',         'caminantes'),
-  ('ajedrez',         'rovers')
+  ('atletismo-100m',  'adultos'),
+  ('ajedrez',         'lobatos'),
+  ('ajedrez',         'webelos'),
+  ('ajedrez',         'scouts'),
+  ('ajedrez',         'nomadas'),
+  ('ajedrez',         'rovers'),
+  ('ajedrez',         'adultos')
 ) as b(sport_slug, branch_id) on b.sport_slug = s.slug
 on conflict do nothing;

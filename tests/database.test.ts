@@ -59,17 +59,43 @@ async function newGroup(name: string, email: string): Promise<string> {
   return result.rows[0]!.id;
 }
 
+/**
+ * Fecha de nacimiento que cae dentro de cada rama.
+ *
+ * Desde que la edad se valida contra el rango de la rama, ya no sirve una fecha
+ * fija para todos: un participante de Lobatos y uno de Rovers no pueden haber
+ * nacido el mismo año. Se calcula a partir de hoy para que las pruebas no
+ * caduquen con el paso del tiempo.
+ */
+function birthdateFor(branch: string): string {
+  const ages: Record<string, number> = {
+    cachorros: 5,
+    lobatos: 9,
+    webelos: 10,
+    scouts: 13,
+    nomadas: 16,
+    rovers: 19,
+    adultos: 30,
+  };
+  const age = ages[branch] ?? 13;
+  const today = new Date();
+  // Se resta un día para no depender de si el cumpleaños es justo hoy.
+  return new Date(today.getFullYear() - age, today.getMonth(), today.getDate() - 1)
+    .toISOString()
+    .slice(0, 10);
+}
+
 async function newParticipant(
   groupId: string,
   document: string,
-  branch = 'tropa',
+  branch = 'scouts',
   active = true,
 ): Promise<string> {
   const result = await db.query<{ id: string }>(
     `insert into public.participants
        (group_id, doc_type, document, first_names, last_names, birthdate, branch_id, active)
-     values ($1, 'TI', $2, 'Nombre', 'Apellido', '2010-05-20', $3, $4) returning id`,
-    [groupId, document, branch, active],
+     values ($1, 'TI', $2, 'Nombre', 'Apellido', $3, $4, $5) returning id`,
+    [groupId, document, birthdateFor(branch), branch, active],
   );
   return result.rows[0]!.id;
 }
@@ -156,7 +182,7 @@ describe('participantes', () => {
       db.query(
         `insert into public.participants
            (group_id, doc_type, document, first_names, last_names, birthdate, branch_id)
-         values ($1, 'CC', '5551234', 'Otra', 'Persona', '1990-01-01', 'tropa')`,
+         values ($1, 'CC', '5551234', 'Otra', 'Persona', '1990-01-01', 'adultos')`,
         [group],
       ),
     ).resolves.toBeDefined();
@@ -181,7 +207,7 @@ describe('participantes', () => {
       db.query(
         `insert into public.participants
            (group_id, doc_type, document, first_names, last_names, birthdate, branch_id)
-         values ($1, 'TI', '8880001', 'Futuro', 'Bebé', '2099-01-01', 'tropa')`,
+         values ($1, 'TI', '8880001', 'Futuro', 'Bebé', '2099-01-01', 'scouts')`,
         [group],
       ),
     ).rejects.toThrow();
@@ -220,7 +246,7 @@ describe('equipos', () => {
   });
 
   it('rechaza a un participante de una rama no habilitada', async () => {
-    // Voleibol solo admite caminantes y rovers.
+    // Voleibol solo admite Nómadas, Rovers y adultos.
     const sport = await idOf('sports', 'slug', 'voleibol');
     const group = await newGroup('Rama Incorrecta', 'rama@ejemplo.com');
 
@@ -230,7 +256,7 @@ describe('equipos', () => {
       [group, sport],
     );
 
-    const participant = await newParticipant(group, '6100001', 'manada');
+    const participant = await newParticipant(group, '6100001', 'lobatos');
     await expect(
       db.query(
         `insert into public.team_members (team_id, participant_id, role) values ($1, $2, 'starter')`,
@@ -249,7 +275,7 @@ describe('equipos', () => {
       [group, sport],
     );
 
-    const participant = await newParticipant(group, '6200001', 'tropa', false);
+    const participant = await newParticipant(group, '6200001', 'scouts', false);
     await expect(
       db.query(
         `insert into public.team_members (team_id, participant_id, role) values ($1, $2, 'starter')`,
@@ -504,5 +530,239 @@ describe('tarifas', () => {
     expect(Number(result.rows[0]?.fee)).toBe(0);
 
     await db.query('update public.sports set fee = null where id = $1', [sport]);
+  });
+});
+
+// ─── Reglas nuevas: ramas por edad, arbitraje y competencias ────────────────
+
+describe('ramas y edad', () => {
+  it('carga las siete ramas con su rango de edad', async () => {
+    const result = await db.query<{ n: number }>(
+      'select count(*)::int as n from public.branches where min_age is not null',
+    );
+    expect(result.rows[0]?.n).toBe(7);
+  });
+
+  it('rechaza a quien no tiene la edad de su rama', async () => {
+    const group = await newGroup('Edad Rama', 'edadrama@ejemplo.com');
+
+    // Un niño de nueve años no puede ser Rover (18–20).
+    await expect(
+      db.query(
+        `insert into public.participants
+           (group_id, doc_type, document, first_names, last_names, birthdate, branch_id)
+         values ($1, 'TI', '9100001', 'Muy', 'Joven', $2, 'rovers')`,
+        [group, birthdateFor('lobatos')],
+      ),
+    ).rejects.toThrow(/Rovers/i);
+  });
+
+  it('acepta a quien sí encaja', async () => {
+    const group = await newGroup('Edad Correcta', 'edadok@ejemplo.com');
+    await expect(newParticipant(group, '9110001', 'rovers')).resolves.toBeDefined();
+  });
+
+  it('también valida al cambiar la rama de alguien ya registrado', async () => {
+    const group = await newGroup('Cambio Rama', 'cambiorama@ejemplo.com');
+    const id = await newParticipant(group, '9120001', 'scouts');
+
+    await expect(
+      db.query(`update public.participants set branch_id = 'cachorros' where id = $1`, [id]),
+    ).rejects.toThrow(/Cachorros/i);
+  });
+
+  it('conserva las equivalencias de las ramas antiguas', async () => {
+    // manada→lobatos, tropa→scouts, caminantes→nomadas. Las viejas ya no existen.
+    const result = await db.query<{ id: string }>(
+      `select id from public.branches where id in ('manada', 'tropa', 'caminantes')`,
+    );
+    expect(result.rows).toHaveLength(0);
+  });
+});
+
+describe('competencias', () => {
+  async function newSchedule(
+    sportSlug: string,
+    branch: string,
+    type: 'match' | 'session',
+    teams: [string, string] | null = null,
+  ): Promise<string> {
+    const sport = await idOf('sports', 'slug', sportSlug);
+    const result = await db.query<{ id: string }>(
+      `insert into public.schedules
+         (sport_id, branch_id, type, label, starts_on, starts_at, team_a_id, team_b_id)
+       values ($1, $2, $3, 'Prueba', current_date, '09:00', $4, $5) returning id`,
+      [sport, branch, type, teams?.[0] ?? null, teams?.[1] ?? null],
+    );
+    return result.rows[0]!.id;
+  }
+
+  it('un partido exige dos equipos distintos', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    await expect(
+      db.query(
+        `insert into public.schedules (sport_id, branch_id, type, starts_on, starts_at)
+         values ($1, 'scouts', 'match', current_date, '09:00')`,
+        [sport],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('una sesión no lleva equipos', async () => {
+    const group = await newGroup('Sesión Equipos', 'sesionequipos@ejemplo.com');
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const team = await db.query<{ id: string }>(
+      `insert into public.teams (owner_group_id, sport_id, name)
+       values ($1, $2, 'Equipo Sesión') returning id`,
+      [group, sport],
+    );
+
+    const atletismo = await idOf('sports', 'slug', 'atletismo-100m');
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, starts_on, starts_at, team_a_id)
+         values ($1, 'scouts', 'session', current_date, '09:00', $2)`,
+        [atletismo, team.rows[0]!.id],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('no publica un partido sin marcador', async () => {
+    const group = await newGroup('Sin Marcador', 'sinmarcador@ejemplo.com');
+    const sport = await idOf('sports', 'slug', 'futbol');
+
+    const teamIds: string[] = [];
+    for (const name of ['Marcador A', 'Marcador B']) {
+      const t = await db.query<{ id: string }>(
+        `insert into public.teams (owner_group_id, sport_id, name) values ($1, $2, $3) returning id`,
+        [group, sport, name],
+      );
+      teamIds.push(t.rows[0]!.id);
+    }
+
+    const schedule = await newSchedule('futbol', 'scouts', 'match', [teamIds[0]!, teamIds[1]!]);
+
+    await expect(
+      db.query('update public.schedules set result_published = true where id = $1', [schedule]),
+    ).rejects.toThrow();
+  });
+
+  it('la tabla de posiciones solo cuenta lo publicado', async () => {
+    const group = await newGroup('Posiciones', 'posiciones@ejemplo.com');
+    const sport = await idOf('sports', 'slug', 'futbol');
+
+    const teamIds: string[] = [];
+    for (const name of ['Tabla A', 'Tabla B']) {
+      const t = await db.query<{ id: string }>(
+        `insert into public.teams (owner_group_id, sport_id, name) values ($1, $2, $3) returning id`,
+        [group, sport, name],
+      );
+      teamIds.push(t.rows[0]!.id);
+    }
+
+    const schedule = await newSchedule('futbol', 'nomadas', 'match', [teamIds[0]!, teamIds[1]!]);
+
+    // Con el resultado en borrador, la vista pública no debe mostrar nada.
+    await db.query(
+      'update public.schedules set score_a = 3, score_b = 1 where id = $1',
+      [schedule],
+    );
+    const draft = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.public_standings where branch_id = 'nomadas'`,
+    );
+    expect(draft.rows[0]?.n).toBe(0);
+
+    // Al publicarlo aparecen los dos equipos, con tres puntos para el ganador.
+    await db.query('update public.schedules set result_published = true where id = $1', [schedule]);
+    const published = await db.query<{ team_name: string; points: number; goal_difference: number }>(
+      `select team_name, points, goal_difference from public.public_standings
+        where branch_id = 'nomadas' order by points desc`,
+    );
+    expect(published.rows).toHaveLength(2);
+    expect(published.rows[0]?.points).toBe(3);
+    expect(published.rows[0]?.goal_difference).toBe(2);
+    expect(published.rows[1]?.points).toBe(0);
+  });
+});
+
+describe('alianzas intergrupales', () => {
+  it('bloquea el pago de un equipo con prestados sin aprobar', async () => {
+    const owner = await newGroup('Dueño Alianza', 'duenoalianza@ejemplo.com');
+    const ally = await newGroup('Aliado Alianza', 'aliadoalianza@ejemplo.com');
+    await db.query(`update public.groups set country_code = 'BR' where id = $1`, [owner]);
+
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const team = await db.query<{ id: string }>(
+      `insert into public.teams (owner_group_id, sport_id, name)
+       values ($1, $2, 'Equipo Prestado') returning id`,
+      [owner, sport],
+    );
+    const teamId = team.rows[0]!.id;
+
+    // Cuatro propios y uno prestado completan los cinco titulares.
+    for (let index = 0; index < 4; index += 1) {
+      const p = await newParticipant(owner, `930000${index}`);
+      await db.query(
+        `insert into public.team_members (team_id, participant_id, role) values ($1, $2, 'starter')`,
+        [teamId, p],
+      );
+    }
+    const borrowed = await newParticipant(ally, '9309999');
+    await db.query(
+      `insert into public.team_members (team_id, participant_id, role) values ($1, $2, 'starter')`,
+      [teamId, borrowed],
+    );
+
+    expect(
+      (
+        await db.query<{ ok: boolean }>('select public.team_intergroup_approved($1) as ok', [teamId])
+      ).rows[0]?.ok,
+    ).toBe(false);
+
+    await expect(
+      db.query(
+        `insert into public.payments
+           (group_id, payable_type, payable_id, concept, expected_amount, reported_amount,
+            payment_date, payer_name, reference, proof_path)
+         values ($1, 'team', $2, 'Equipo', 10000, 10000, current_date, 'Alguien', 'REF-ALIANZA', 'x/y.jpg')`,
+        [owner, teamId],
+      ),
+    ).rejects.toThrow(/aprobar/i);
+  });
+
+  it('deja pagar a un equipo sin prestados', async () => {
+    const owner = await newGroup('Solo Propios', 'solopropios@ejemplo.com');
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const team = await db.query<{ id: string }>(
+      `insert into public.teams (owner_group_id, sport_id, name)
+       values ($1, $2, 'Equipo Propio') returning id`,
+      [owner, sport],
+    );
+    const teamId = team.rows[0]!.id;
+
+    for (let index = 0; index < 5; index += 1) {
+      const p = await newParticipant(owner, `940000${index}`);
+      await db.query(
+        `insert into public.team_members (team_id, participant_id, role) values ($1, $2, 'starter')`,
+        [teamId, p],
+      );
+    }
+
+    expect(
+      (
+        await db.query<{ ok: boolean }>('select public.team_intergroup_approved($1) as ok', [teamId])
+      ).rows[0]?.ok,
+    ).toBe(true);
+
+    await expect(
+      db.query(
+        `insert into public.payments
+           (group_id, payable_type, payable_id, concept, expected_amount, reported_amount,
+            payment_date, payer_name, reference, proof_path)
+         values ($1, 'team', $2, 'Equipo', 10000, 10000, current_date, 'Alguien', 'REF-PROPIO', 'x/y.jpg')`,
+        [owner, teamId],
+      ),
+    ).resolves.toBeDefined();
   });
 });

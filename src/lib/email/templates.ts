@@ -289,3 +289,113 @@ ${input.note ? `\nObservación: ${input.note}` : ''}
 Consulta el detalle en: ${input.panelUrl}`,
   };
 }
+
+// ─── Alta de árbitro ─────────────────────────────────────────────────────────
+
+export function refereeWelcomeEmail(input: {
+  eventName: string;
+  refereeName: string;
+  email: string;
+  password: string;
+  loginUrl: string;
+  sports: string[];
+}): RenderedEmail {
+  const sportList = input.sports.length ? input.sports.join(', ') : 'por asignar';
+
+  return {
+    template: 'arbitro_alta',
+    subject: `Acceso de árbitro · ${input.eventName}`,
+    html: layout({
+      title: 'Bienvenido al equipo de arbitraje',
+      eventName: input.eventName,
+      cta: { label: 'Ingresar al sistema', url: input.loginUrl },
+      body: `
+        <p>Hola ${escapeHtml(input.refereeName)},</p>
+        <p>La organización te registró como árbitro de <b>${escapeHtml(input.eventName)}</b>.
+           Vas a dirigir: <b>${escapeHtml(sportList)}</b>.</p>
+        <p>Estos son tus datos de acceso:</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+               style="background:${BRAND.bg};border-radius:12px;margin:8px 0 4px">
+          <tr><td style="padding:16px 18px">
+            <div style="color:${BRAND.gray};font-size:12px;text-transform:uppercase;letter-spacing:.1em">Usuario</div>
+            <div style="font-weight:700;font-size:16px;margin-bottom:12px">${escapeHtml(input.email)}</div>
+            <div style="color:${BRAND.gray};font-size:12px;text-transform:uppercase;letter-spacing:.1em">Contraseña temporal</div>
+            <div style="font-weight:700;font-size:20px;font-family:ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:.05em">${escapeHtml(input.password)}</div>
+          </td></tr>
+        </table>
+        <p style="background:#fff4e0;border-left:3px solid #a86508;padding:12px 14px;border-radius:8px;color:#7a4a06">
+          <b>Cambia esta contraseña en tu primer ingreso.</b> El sistema te lo pedirá
+          automáticamente. No compartas este correo con nadie.
+        </p>
+        <p>En «Mis competencias» verás únicamente lo que te asignó la organización.
+           Ahí registras el marcador, el tiempo o los puntos, y decides si lo guardas
+           como borrador o lo publicas. <b>Lo publicado queda visible para todo el
+           mundo</b>, así que verifícalo antes.</p>`,
+    }),
+    text: `Hola ${input.refereeName},
+
+La organización te registró como árbitro de ${input.eventName}.
+Deportes asignados: ${sportList}.
+
+Datos de acceso:
+  Usuario: ${input.email}
+  Contraseña temporal: ${input.password}
+
+IMPORTANTE: cambia esta contraseña en tu primer ingreso. No compartas este correo con nadie.
+
+Ingresa en: ${input.loginUrl}
+
+En "Mis competencias" verás lo que te asignaron. Ahí registras el resultado y decides si lo guardas como borrador o lo publicas. Lo publicado queda visible para todo el mundo, así que verifícalo antes.`,
+  };
+}
+
+// ─── Alianza intergrupal revisada ────────────────────────────────────────────
+
+export function intergroupReviewedEmail(input: {
+  eventName: string;
+  groupName: string;
+  teamName: string;
+  approved: boolean;
+  note: string;
+  panelUrl: string;
+}): RenderedEmail {
+  const title = input.approved ? 'Alianza aprobada' : 'Alianza rechazada';
+
+  return {
+    template: 'alianza_revisada',
+    subject: `${title} · ${input.teamName}`,
+    html: layout({
+      title,
+      eventName: input.eventName,
+      cta: { label: 'Ver mis solicitudes', url: input.panelUrl },
+      body: input.approved
+        ? `<p>Hola ${escapeHtml(input.groupName)},</p>
+           <p>La organización verificó a los participantes de otros grupos que integran
+              <b>${escapeHtml(input.teamName)}</b>. El equipo ya puede continuar con el pago.</p>
+           ${input.note ? `<p><b>Observación:</b> ${escapeHtml(input.note)}</p>` : ''}`
+        : `<p>Hola ${escapeHtml(input.groupName)},</p>
+           <p>La organización no aprobó la alianza de <b>${escapeHtml(input.teamName)}</b>.
+              Los participantes prestados salieron de la alineación.</p>
+           <p style="background:#fdeaea;border-left:3px solid #b42318;padding:12px 14px;border-radius:8px;color:#7a1710">
+             <b>Motivo:</b> ${escapeHtml(input.note)}
+           </p>
+           <p>Puedes volver a solicitar apoyo a otro grupo o completar el equipo con tu propia gente.</p>`,
+    }),
+    text: input.approved
+      ? `Hola ${input.groupName},
+
+La organización verificó a los participantes de otros grupos que integran ${input.teamName}. El equipo ya puede continuar con el pago.
+${input.note ? `\nObservación: ${input.note}` : ''}
+
+Consulta el detalle en: ${input.panelUrl}`
+      : `Hola ${input.groupName},
+
+La organización no aprobó la alianza de ${input.teamName}. Los participantes prestados salieron de la alineación.
+
+Motivo: ${input.note}
+
+Puedes volver a solicitar apoyo a otro grupo o completar el equipo con tu propia gente.
+
+Consulta el detalle en: ${input.panelUrl}`,
+  };
+}

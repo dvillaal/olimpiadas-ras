@@ -106,10 +106,17 @@ try {
 // Comprobaciones de contenido: que el seed haya dejado lo que promete.
 const checks = [
   ['países', 'select count(*)::int as n from public.countries', (n) => n >= 190],
-  ['ramas', 'select count(*)::int as n from public.branches', (n) => n === 4],
+  ['ramas', 'select count(*)::int as n from public.branches', (n) => n === 7],
   ['deportes', 'select count(*)::int as n from public.sports', (n) => n === 5],
-  ['ramas por deporte', 'select count(*)::int as n from public.sport_branches', (n) => n === 16],
+  ['ramas por deporte', 'select count(*)::int as n from public.sport_branches', (n) => n === 22],
   ['configuración', 'select count(*)::int as n from public.settings', (n) => n === 1],
+  // Toda rama debe traer su rango de edad: sin él, la validación de edad al
+  // inscribir participantes no tendría contra qué comparar.
+  [
+    'ramas con edad',
+    'select count(*)::int as n from public.branches where min_age is null or max_age is null',
+    (n) => n === 0,
+  ],
 ];
 
 for (const [label, sql, assert] of checks) {

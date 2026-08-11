@@ -17,7 +17,9 @@ export type EmailTemplate =
   | 'pago_aprobado'
   | 'pago_rechazado'
   | 'pago_correccion'
-  | 'admin_nueva_solicitud';
+  | 'admin_nueva_solicitud'
+  | 'arbitro_alta'
+  | 'alianza_revisada';
 
 export interface SendEmailInput {
   to: string;

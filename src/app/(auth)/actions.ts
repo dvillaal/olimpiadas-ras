@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { internalRoute } from '@/lib/routes';
+import { homeForRole } from '@/lib/auth/session';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/email/send';
 import {
@@ -194,5 +195,5 @@ export async function changePasswordAction(
     .eq('id', user.id)
     .maybeSingle();
 
-  redirect(profile?.role === 'admin' ? '/admin' : '/panel');
+  redirect(homeForRole(profile?.role ?? 'group'));
 }

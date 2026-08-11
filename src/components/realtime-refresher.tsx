@@ -25,7 +25,9 @@ type WatchedTable =
   | 'groups'
   | 'stands'
   | 'participants'
-  | 'countries';
+  | 'countries'
+  | 'schedules'
+  | 'schedule_participants';
 
 export function RealtimeRefresher({
   groupId,

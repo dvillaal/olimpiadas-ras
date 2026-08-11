@@ -3,6 +3,7 @@ import type {
   IntergroupStatus,
   PaymentStatus,
   RegistrationStatus,
+  ScheduleStatus,
 } from '@/types/database';
 
 /** Paleta de estados, compartida por insignias y tarjetas. */
@@ -53,8 +54,30 @@ const GROUP: Record<GroupStatus, StatusView> = {
 const INTERGROUP: Record<IntergroupStatus, StatusView> = {
   pending: { label: 'Esperando respuesta', tone: 'yellow' },
   proposed: { label: 'Participantes propuestos', tone: 'blue' },
-  accepted: { label: 'Aceptada', tone: 'green' },
+  accepted: { label: 'Aceptada por el grupo', tone: 'blue' },
+  admin_review: {
+    label: 'Revisión de la organización',
+    tone: 'orange',
+    hint: 'El equipo podrá pagar cuando se apruebe la alianza.',
+  },
+  admin_approved: {
+    label: 'Alianza aprobada',
+    tone: 'green',
+    hint: 'Ya pueden continuar con el pago del equipo.',
+  },
+  admin_rejected: {
+    label: 'Rechazada por la organización',
+    tone: 'red',
+    hint: 'Los participantes prestados salieron del equipo.',
+  },
   rejected: { label: 'Rechazada', tone: 'red' },
+  cancelled: { label: 'Cancelada', tone: 'gray' },
+};
+
+const SCHEDULE: Record<ScheduleStatus, StatusView> = {
+  scheduled: { label: 'Programada', tone: 'blue' },
+  in_progress: { label: 'Resultado en borrador', tone: 'yellow' },
+  finished: { label: 'Finalizada', tone: 'green' },
   cancelled: { label: 'Cancelada', tone: 'gray' },
 };
 
@@ -74,6 +97,18 @@ export function groupStatusView(status: GroupStatus): StatusView {
 
 export function intergroupStatusView(status: IntergroupStatus): StatusView {
   return INTERGROUP[status] ?? FALLBACK;
+}
+
+export function scheduleStatusView(status: ScheduleStatus): StatusView {
+  return SCHEDULE[status] ?? FALLBACK;
+}
+
+/**
+ * Una alianza sigue viva mientras no la hayan rechazado ni cancelado. Se usa
+ * para decidir si el equipo puede seguir contando con los prestados.
+ */
+export function isIntergroupActive(status: IntergroupStatus): boolean {
+  return !['rejected', 'cancelled', 'admin_rejected'].includes(status);
 }
 
 /**

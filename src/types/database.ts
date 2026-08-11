@@ -11,7 +11,7 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type UserRole = 'admin' | 'group';
+export type UserRole = 'admin' | 'group' | 'referee';
 export type GroupStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 export type SportType = 'individual' | 'group';
 export type RegistrationStatus =
@@ -24,9 +24,21 @@ export type RegistrationStatus =
 export type PaymentStatus = 'sent' | 'correction' | 'rejected' | 'approved';
 export type PayableType = 'team' | 'individual' | 'stand';
 export type TeamMemberRole = 'starter' | 'substitute';
-export type IntergroupStatus = 'pending' | 'proposed' | 'accepted' | 'rejected' | 'cancelled';
+export type IntergroupStatus =
+  | 'pending'
+  | 'proposed'
+  | 'accepted'
+  | 'admin_review'
+  | 'admin_approved'
+  | 'admin_rejected'
+  | 'rejected'
+  | 'cancelled';
 export type DocumentType = 'RC' | 'TI' | 'CC' | 'CE' | 'PA' | 'PEP';
 export type Gender = 'F' | 'M' | 'O';
+export type ScheduleType = 'match' | 'session';
+export type ScheduleStatus = 'scheduled' | 'in_progress' | 'finished' | 'cancelled';
+/** En unos deportes gana la marca más alta y en otros la más baja. */
+export type ResultOrder = 'asc' | 'desc';
 
 type Settings = {
   id: boolean;
@@ -58,6 +70,10 @@ type Branch = {
   name: string;
   sort_order: number;
   active: boolean;
+  /** Rango de edad de la rama. La edad del participante debe caer dentro. */
+  min_age: number;
+  max_age: number;
+  description: string;
   created_at: string;
 };
 
@@ -132,6 +148,11 @@ type Sport = {
   max_external: number;
   active: boolean;
   sort_order: number;
+  /** Cuántas personas caben en una tanda de un deporte individual. */
+  session_capacity: number;
+  /** Cómo se llama el resultado aquí: «Goles», «Tiempo», «Puntos». */
+  result_label: string;
+  result_order: ResultOrder;
   created_at: string;
   updated_at: string;
 };
@@ -139,6 +160,51 @@ type Sport = {
 type SportBranch = {
   sport_id: string;
   branch_id: string;
+};
+
+type Referee = {
+  id: string;
+  phone: string;
+  notes: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type RefereeSport = {
+  referee_id: string;
+  sport_id: string;
+};
+
+type Schedule = {
+  id: string;
+  sport_id: string;
+  branch_id: string;
+  type: ScheduleType;
+  label: string;
+  starts_on: string;
+  starts_at: string;
+  venue: string;
+  referee_id: string | null;
+  team_a_id: string | null;
+  team_b_id: string | null;
+  status: ScheduleStatus;
+  score_a: number | null;
+  score_b: number | null;
+  result_notes: string;
+  result_published: boolean;
+  result_entered_by: string | null;
+  result_updated_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type ScheduleParticipant = {
+  schedule_id: string;
+  participant_id: string;
+  value: number | null;
+  disqualified: boolean;
+  rank: number | null;
 };
 
 type Team = {
@@ -188,6 +254,10 @@ type IntergroupRequest = {
   created_at: string;
   responded_at: string | null;
   resolved_at: string | null;
+  /** Revisión de la organización, obligatoria antes de que el equipo pague. */
+  admin_note: string;
+  admin_reviewed_at: string | null;
+  admin_reviewed_by: string | null;
 };
 
 type IntergroupProposal = {
@@ -273,6 +343,67 @@ type EmailLog = {
   created_at: string;
 };
 
+// ─── Vistas del portal público ───────────────────────────────────────────────
+// Solo exponen competencias con resultado publicado y nombres ya públicos.
+
+type PublicSchedule = {
+  id: string;
+  type: ScheduleType;
+  label: string;
+  starts_on: string;
+  starts_at: string;
+  venue: string;
+  status: ScheduleStatus;
+  result_published: boolean;
+  score_a: number | null;
+  score_b: number | null;
+  result_notes: string;
+  sport_name: string;
+  sport_icon: string;
+  sport_slug: string;
+  result_label: string;
+  branch_id: string;
+  branch_name: string;
+  team_a_name: string | null;
+  team_b_name: string | null;
+  referee_name: string | null;
+};
+
+type PublicStanding = {
+  sport_id: string;
+  sport_name: string;
+  sport_slug: string;
+  branch_id: string;
+  branch_name: string;
+  team_id: string;
+  team_name: string;
+  group_name: string;
+  country_code: string | null;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goals_for: number;
+  goals_against: number;
+  goal_difference: number;
+  points: number;
+};
+
+type PublicIndividualRank = {
+  sport_id: string;
+  sport_name: string;
+  sport_slug: string;
+  result_label: string;
+  branch_id: string;
+  branch_name: string;
+  participant_id: string;
+  participant_name: string;
+  group_name: string;
+  country_code: string | null;
+  best_value: number;
+  position: number;
+};
+
 /** Convierte una fila en su forma insertable: opcionales los que tienen default. */
 type Insertable<Row, Required extends keyof Row> = Pick<Row, Required> & Partial<Omit<Row, Required>>;
 
@@ -324,6 +455,16 @@ export interface Database {
         IntergroupProposal,
         Insertable<IntergroupProposal, 'request_id' | 'participant_id'>
       >;
+      referees: TableDef<Referee, Insertable<Referee, 'id'>>;
+      referee_sports: TableDef<RefereeSport, RefereeSport>;
+      schedules: TableDef<
+        Schedule,
+        Insertable<Schedule, 'sport_id' | 'branch_id' | 'type' | 'starts_on' | 'starts_at'>
+      >;
+      schedule_participants: TableDef<
+        ScheduleParticipant,
+        Insertable<ScheduleParticipant, 'schedule_id' | 'participant_id'>
+      >;
       stands: TableDef<Stand, Insertable<Stand, 'group_id' | 'name' | 'responsible'>>;
       payments: TableDef<
         Payment,
@@ -346,7 +487,10 @@ export interface Database {
       email_log: TableDef<EmailLog, Insertable<EmailLog, 'to_email' | 'template' | 'subject'>>;
     };
     Views: {
-      [_ in never]: never;
+      // Las tres únicas consultas accesibles sin iniciar sesión.
+      public_schedule: { Row: PublicSchedule; Relationships: [] };
+      public_standings: { Row: PublicStanding; Relationships: [] };
+      public_individual_ranking: { Row: PublicIndividualRank; Relationships: [] };
     };
     Functions: {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -383,6 +527,46 @@ export interface Database {
         Returns: Payment;
       };
       accept_intergroup_proposal: { Args: { p_request_id: string }; Returns: undefined };
+      review_intergroup_request: {
+        Args: { p_request_id: string; p_approve: boolean; p_note?: string };
+        Returns: undefined;
+      };
+      team_intergroup_approved: { Args: { p_team_id: string }; Returns: boolean };
+      generate_schedule: {
+        Args: {
+          p_sport_id: string;
+          p_branch_id: string;
+          p_starts_on: string;
+          p_starts_at: string;
+          p_interval_min?: number;
+          p_venue?: string;
+          p_referee_id?: string | null;
+          p_include_pending?: boolean;
+        };
+        /** Cuántas competencias quedaron creadas. */
+        Returns: number;
+      };
+      save_match_result: {
+        Args: {
+          p_schedule_id: string;
+          p_score_a: number | null;
+          p_score_b: number | null;
+          p_notes?: string;
+          p_publish?: boolean;
+        };
+        Returns: Schedule;
+      };
+      save_session_result: {
+        Args: {
+          p_schedule_id: string;
+          p_entries: Json;
+          p_notes?: string;
+          p_publish?: boolean;
+        };
+        Returns: Schedule;
+      };
+      can_manage_schedule: { Args: { p_schedule_id: string }; Returns: boolean };
+      current_referee_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       log_audit: {
         Args: { p_action: string; p_entity_type?: string; p_entity_id?: string; p_metadata?: Json };
         Returns: undefined;
@@ -399,6 +583,9 @@ export interface Database {
       intergroup_status: IntergroupStatus;
       document_type: DocumentType;
       gender: Gender;
+      schedule_type: ScheduleType;
+      schedule_status: ScheduleStatus;
+      result_order: ResultOrder;
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -433,4 +620,11 @@ export type {
   Notification,
   AuditLog,
   EmailLog,
+  Referee,
+  RefereeSport,
+  Schedule,
+  ScheduleParticipant,
+  PublicSchedule,
+  PublicStanding,
+  PublicIndividualRank,
 };

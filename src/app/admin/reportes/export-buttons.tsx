@@ -19,6 +19,8 @@ export interface ExportData {
   pagos: Row[];
   equipos: Row[];
   grupos: Row[];
+  programacion: Row[];
+  resultados: Row[];
 }
 
 /** Escapa un valor para CSV según RFC 4180. */
@@ -69,6 +71,8 @@ export function ExportButtons({ data, eventName }: { data: ExportData; eventName
         ['participantes', 'Participantes'],
         ['equipos', 'Equipos'],
         ['pagos', 'Pagos'],
+        ['programacion', 'Programación'],
+        ['resultados', 'Resultados'],
       ];
 
       for (const [key, title] of sheets) {
@@ -121,6 +125,12 @@ export function ExportButtons({ data, eventName }: { data: ExportData; eventName
       </Button>
       <Button type="button" size="sm" variant="ghost" onClick={() => exportCsv('equipos')}>
         CSV equipos
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={() => exportCsv('programacion')}>
+        CSV programación
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={() => exportCsv('resultados')}>
+        CSV resultados
       </Button>
     </div>
   );

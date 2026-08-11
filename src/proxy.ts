@@ -14,7 +14,8 @@ import type { Database } from '@/types/database';
  * llamarse `src/proxy.ts` y exportar una función `proxy`.
  */
 
-const PUBLIC_ROUTES = ['/', '/ingresar', '/registro', '/recuperar', '/auth'];
+// `/resultados` es el portal público: se consulta sin cuenta, a propósito.
+const PUBLIC_ROUTES = ['/', '/ingresar', '/registro', '/recuperar', '/auth', '/resultados'];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));

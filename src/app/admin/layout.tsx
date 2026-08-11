@@ -14,18 +14,28 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const settings = await getSettings();
   const supabase = await createClient();
 
-  const [{ count: pendingGroups }, { count: pendingPayments }, { count: pendingStands }] =
-    await Promise.all([
-      supabase.from('groups').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase
-        .from('payments')
-        .select('id', { count: 'exact', head: true })
-        .in('status', ['sent', 'correction']),
-      supabase
-        .from('stands')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'payment_pending'),
-    ]);
+  const [
+    { count: pendingGroups },
+    { count: pendingPayments },
+    { count: pendingStands },
+    { count: pendingAlliances },
+  ] = await Promise.all([
+    supabase.from('groups').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase
+      .from('payments')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['sent', 'correction']),
+    supabase
+      .from('stands')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'payment_pending'),
+    // Alianzas esperando el visto bueno de la organización: sin él, el equipo
+    // no puede pagar, así que conviene que salte a la vista en el menú.
+    supabase
+      .from('intergroup_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'admin_review'),
+  ]);
 
   const nav: NavItem[] = [
     { href: '/admin', icon: '🏠', label: 'Inicio' },
@@ -36,7 +46,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/ramas', icon: '🌿', label: 'Ramas' },
     { href: '/admin/deportes', icon: '🏅', label: 'Deportes' },
     { href: '/admin/equipos', icon: '🤝', label: 'Equipos' },
-    { href: '/admin/intergrupales', icon: '🔄', label: 'Intergrupales' },
+    {
+      href: '/admin/intergrupales',
+      icon: '🔄',
+      label: 'Intergrupales',
+      badge: pendingAlliances ?? 0,
+    },
+    { href: '/admin/arbitros', icon: '🧑‍⚖️', label: 'Árbitros' },
+    { href: '/admin/programacion', icon: '🗓️', label: 'Programación' },
     { href: '/admin/pagos', icon: '💳', label: 'Pagos', badge: pendingPayments ?? 0 },
     { href: '/admin/stands', icon: '🛍️', label: 'Stands', badge: pendingStands ?? 0 },
     { href: '/admin/reportes', icon: '📊', label: 'Reportes' },

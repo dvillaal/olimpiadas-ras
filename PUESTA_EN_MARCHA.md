@@ -45,7 +45,7 @@ npm run db:validate
 npm test
 ```
 
-Resultado esperado: sin errores y `102 passed` en las pruebas.
+Resultado esperado: sin errores y `149 passed` en las pruebas.
 
 ---
 
@@ -112,7 +112,8 @@ npm run db:seed
 - `supabase login` abre el navegador para autorizar la CLI.
 - `link` te pedirá la contraseña de la base de datos del paso 3.
 - `db:seed` aplica los cinco archivos de `supabase/migrations/` y después
-  `supabase/seed.sql` (195 países, 4 ramas, 5 deportes y la configuración inicial).
+  `supabase/seed.sql` (195 países, 7 ramas con su rango de edad, 5 deportes y la
+  configuración inicial).
 
 **Si `supabase link` te da problemas**, puedes hacerlo por el navegador:
 abre el **SQL Editor** del panel y pega el contenido de estos archivos, en este orden,
@@ -124,6 +125,8 @@ supabase/migrations/20260806000200_functions.sql
 supabase/migrations/20260806000300_rls.sql
 supabase/migrations/20260806000400_storage.sql
 supabase/migrations/20260806000500_realtime.sql
+supabase/migrations/20260811000600_competitions.sql
+supabase/migrations/20260811000700_competitions_functions.sql
 supabase/seed.sql
 ```
 
@@ -162,6 +165,23 @@ Con la aplicación corriendo:
 4. Mira la terminal donde corre `npm run dev`: como todavía no configuraste Resend,
    el correo con la contraseña temporal se imprime ahí.
 5. Ingresa con esas credenciales en la ventana de incógnito y recorre el panel del grupo.
+
+---
+
+## Paso 8b · Probar competencias y arbitraje
+
+1. Como administrador, entra a **Árbitros** y registra uno con un correo tuyo.
+   Asígnale al menos un deporte. La contraseña sale en la consola de `npm run dev`.
+2. Carga participantes en el grupo de prueba e inscríbelos en un deporte.
+3. Entra a **Programación**, escoge deporte y rama, pon fecha y hora, marca
+   «Incluir inscripciones que aún no están confirmadas» y genera.
+4. Ingresa con la cuenta del árbitro en otra ventana. En **Mis competencias**
+   registra un resultado: primero como borrador, luego publícalo.
+5. Abre <http://localhost:3000/resultados> **sin sesión** (otra ventana de
+   incógnito) y comprueba que aparezca solo lo publicado.
+
+Para ver la tabla de posiciones necesitas al menos dos equipos completos en el
+mismo deporte y rama, y un partido entre ellos con resultado publicado.
 
 ---
 
@@ -213,7 +233,7 @@ dominio a *Site URL* y a *Redirect URLs*.
 | `npm start` | Sirve la compilación de producción |
 | `npm run typecheck` | Revisa los tipos de TypeScript |
 | `npm run lint` | Revisa el estilo del código |
-| `npm test` | Ejecuta las 102 pruebas |
+| `npm test` | Ejecuta las 149 pruebas |
 | `npm run test:watch` | Pruebas en modo continuo mientras editas |
 | `npm run db:validate` | Valida el SQL sin conectarse a nada |
 | `npm run db:link` | Enlaza la carpeta con tu proyecto de Supabase |
@@ -221,6 +241,9 @@ dominio a *Site URL* y a *Redirect URLs*.
 | `npm run db:seed` | Aplica migraciones **y** los datos iniciales |
 | `npm run db:types` | Regenera los tipos desde la base de datos real |
 | `npm run seed:admin <correo> <clave> <nombre>` | Crea la cuenta de administrador |
+
+Los árbitros no se crean por consola: se registran desde **Árbitros** en el panel
+de administración y reciben su contraseña por correo.
 
 ---
 
@@ -237,3 +260,7 @@ dominio a *Site URL* y a *Redirect URLs*.
 | Avisos `EBADENGINE` al instalar | Node menor que 22 | Actualiza Node (paso 0) |
 | El correo de aprobación no llega | Resend sin configurar | Es normal: la contraseña sale en la consola y en el mensaje de confirmación |
 | Cambios en `.env.local` sin efecto | El servidor no releyó las variables | Detén con `Ctrl+C` y vuelve a `npm run dev` |
+| `La rama X admite de N a M años` | La edad no corresponde a la rama | Corrige la fecha de nacimiento o cambia de rama (paso 8b) |
+| `Hacen falta al menos dos equipos completos` | Solo hay un equipo con la alineación llena | Completa otro equipo o marca «incluir no confirmadas» |
+| `Administración debe aprobar a los participantes de otros grupos` | El equipo tiene prestados sin visto bueno | Apruébalos en **Intergrupales** antes de pagar |
+| `/resultados` aparece vacío | Ningún árbitro ha publicado todavía | Publica un resultado desde el panel de arbitraje |

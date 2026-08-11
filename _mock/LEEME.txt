@@ -1,17 +1,20 @@
-OLIMPIADAS SCOUTS · SISTEMA LOCAL
-================================
+OLIMPIADAS SCOUTS – SISTEMA LOCAL V4
+====================================
 
-1. Abra index.html con Google Chrome o Microsoft Edge.
-2. No necesita instalar programas ni tener conexión a internet.
-3. La información se guarda en el navegador del computador donde se use.
-4. Los comprobantes se guardan en IndexedDB dentro del mismo navegador.
-5. Use Reportes y respaldo para descargar una copia completa periódicamente.
+CÓMO ABRIRLO
+1. Descomprima el archivo ZIP completo.
+2. Mantenga index.html y las plantillas en la misma carpeta.
+3. Abra index.html con Google Chrome o Microsoft Edge.
+4. Los datos quedan guardados en ese navegador y computador.
 
 ACCESOS DE DEMOSTRACIÓN
------------------------
 Administrador
 Usuario: admin
 Contraseña: Scout2026!
+
+Árbitro
+Usuario: arbitro
+Contraseña: 1234
 
 Grupo Scout Horizonte
 Usuario: horizonte
@@ -21,26 +24,71 @@ Grupo Scout Cóndores
 Usuario: condores
 Contraseña: 1234
 
-TARIFAS INICIALES
------------------
-Deporte individual: $5.000 COP por participante.
-Stand de ventas: $50.000 COP.
-Deporte grupal: $0 inicialmente porque el valor entregado fue "0 mil pesos".
-El administrador debe definir el valor real en Configuración antes de habilitar el pago de equipos grupales.
+NUEVAS FUNCIONES
+- Rol de árbitro con acceso independiente.
+- Creación, edición y desactivación de árbitros.
+- Asignación de árbitros por deporte y competencia.
+- Generación automática de partidos todos contra todos.
+- Generación automática de sesiones para deportes individuales.
+- Creación manual de finales, desempates y sesiones especiales.
+- Registro de marcadores, puntos, tiempos o marcas.
+- Guardado de resultados como borrador.
+- Publicación de resultados oficiales.
+- Portal de resultados de acceso libre, sin usuario ni contraseña.
+- Tabla de posiciones para deportes grupales.
+- Clasificación general para deportes individuales.
+- Programación particular para cada grupo scout.
+- Solicitudes intergrupales con rechazo y motivo.
+- Aprobación administrativa de participantes externos antes del pago.
 
-CUENTA PARA PAGOS
------------------
+RAMAS CONFIGURADAS
+- cachorros: 5 a 6 años.
+- lobatos: 7 a 10 años.
+- webelos: 10 a 11 años.
+- scouts: 11 a 14 años.
+- nomadas: 15 a 17 años.
+- rovers: 18 a 20 años.
+- adultos: Consejeros y Dirigentes, 21 años en adelante.
+
+FLUJO PARA PROGRAMAR COMPETENCIAS
+1. Confirme las inscripciones y pagos de equipos o participantes.
+2. Cree los árbitros desde el menú Árbitros.
+3. Entre en Programación.
+4. Seleccione deporte, rama, fecha, hora, lugar y árbitro.
+5. Presione Generar automáticamente.
+6. En deportes grupales se crean partidos todos contra todos.
+7. En deportes individuales se crean sesiones según el cupo configurado.
+
+FLUJO DEL ÁRBITRO
+1. Ingrese con su usuario y contraseña.
+2. Abra Mis competencias.
+3. Seleccione Registrar resultado.
+4. Ingrese el marcador, tiempo, marca o puntaje.
+5. Guarde como borrador o publique el resultado.
+
+RESULTADOS PÚBLICOS
+En la pantalla de ingreso presione “Ver programación y resultados”.
+También puede abrirse desde cualquier panel mediante “Resultados públicos”.
+No requiere usuario ni contraseña.
+
+SOLICITUDES INTERGRUPALES
+1. El grupo crea un equipo incompleto.
+2. En Mis equipos presiona Solicitar apoyo.
+3. El grupo aliado propone participantes o rechaza con un motivo.
+4. El grupo solicitante acepta la propuesta.
+5. Administración revisa y aprueba a los participantes externos.
+6. Solo después de la aprobación se habilita el pago del equipo completo.
+
+PAGOS
+Deportes individuales: $5.000 por participante.
+Stand de ventas: $50.000.
+Deportes grupales: valor configurable por administración; inicia en $0 hasta definirlo.
+
 Cuenta Bancaria RAS
-Ahorros Bancolombia
+Bancolombia – Cuenta de ahorros
 Número: 10322142743
 NIT: 890904933-6
 Titular: Corporación Región Antioquia Scout
 
-PLANTILLAS
-----------
-- plantilla_participantes.xlsx: archivo con instrucciones y listas desplegables.
-- plantilla_participantes.csv: archivo plano compatible con Excel y con la carga de la aplicación.
-
 IMPORTANTE
-----------
-Esta es una aplicación local. Para que varios grupos entren al mismo tiempo desde diferentes dispositivos y compartan información en tiempo real, será necesario publicar una versión web con base de datos central.
+Esta es una versión local. Para que varios grupos y árbitros trabajen al mismo tiempo desde equipos diferentes se requiere una versión en línea con base de datos central.

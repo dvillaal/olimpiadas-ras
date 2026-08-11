@@ -3,6 +3,8 @@ import { requireAdmin, getSettings } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { formatCOP, sportFee } from '@/lib/domain/fees';
 import { EmptyState, PageHeader, Panel, ProgressBar, StatCard } from '@/components/ui';
+import { loadCompetitions } from '@/lib/competitions/load';
+import { shortTime } from '@/lib/domain/competitions';
 import { ExportButtons } from './export-buttons';
 
 export const metadata: Metadata = { title: 'Reportes' };
@@ -35,6 +37,8 @@ export default async function AdminReportsPage() {
     supabase.from('stands').select('*'),
     supabase.from('branches').select('*').order('sort_order'),
   ]);
+
+  const competitions = await loadCompetitions(supabase);
 
   const groupRows = groups ?? [];
   const participantRows = participants ?? [];
@@ -168,6 +172,57 @@ export default async function AdminReportsPage() {
       STAND: g.hasStand ? 'SI' : 'NO',
       AVANCE: `${g.percent}%`,
     })),
+
+    // ─── Programación ────────────────────────────────────────────────────────
+    programacion: competitions.map((c) => ({
+      FECHA: c.startsOn,
+      HORA: shortTime(c.startsAt),
+      DEPORTE: c.sportName,
+      RAMA: c.branchName,
+      TIPO: c.type === 'match' ? 'PARTIDO' : 'SESION',
+      COMPETENCIA:
+        c.type === 'match' ? `${c.teamAName} vs. ${c.teamBName}` : c.label,
+      PARTICIPANTES: c.type === 'session' ? c.participants.length : '',
+      LUGAR: c.venue,
+      ARBITRO: c.refereeName ?? 'SIN ASIGNAR',
+      ESTADO: c.status,
+      PUBLICADO: c.resultPublished ? 'SI' : 'NO',
+    })),
+
+    // ─── Resultados ──────────────────────────────────────────────────────────
+    // Una fila por marca en las sesiones y una por partido: así el archivo
+    // sirve tanto para revisar podios como para auditar un marcador puntual.
+    resultados: competitions
+      .filter((c) => c.resultPublished)
+      .flatMap((c) =>
+        c.type === 'match'
+          ? [
+              {
+                FECHA: c.startsOn,
+                DEPORTE: c.sportName,
+                RAMA: c.branchName,
+                COMPETENCIA: `${c.teamAName} vs. ${c.teamBName}`,
+                PARTICIPANTE: '',
+                EQUIPO_O_GRUPO: '',
+                MEDIDA: c.resultLabel,
+                RESULTADO: `${c.scoreA} - ${c.scoreB}`,
+                PUESTO: '',
+                OBSERVACIONES: c.resultNotes,
+              },
+            ]
+          : c.participants.map((p) => ({
+              FECHA: c.startsOn,
+              DEPORTE: c.sportName,
+              RAMA: c.branchName,
+              COMPETENCIA: c.label,
+              PARTICIPANTE: p.name,
+              EQUIPO_O_GRUPO: p.groupName,
+              MEDIDA: c.resultLabel,
+              RESULTADO: p.disqualified ? 'DESCALIFICADO' : (p.value ?? ''),
+              PUESTO: p.rank ?? '',
+              OBSERVACIONES: c.resultNotes,
+            })),
+      ),
   };
 
   return (

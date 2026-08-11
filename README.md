@@ -1,8 +1,9 @@
 # Olimpiadas Scouts
 
-Sistema de inscripción para las Olimpiadas Scouts: registro de grupos, participantes,
-selección de países, deportes individuales y por equipos, préstamos de participantes
-entre grupos, pagos con comprobante y stands de ventas.
+Sistema de inscripción y competencia para las Olimpiadas Scouts: registro de grupos,
+participantes, selección de países, deportes individuales y por equipos, préstamos de
+participantes entre grupos, pagos con comprobante, stands de ventas, programación de
+competencias, arbitraje y un portal público de resultados.
 
 Reemplaza al prototipo local de un solo archivo (conservado en `_mock/`) por una
 aplicación web multiusuario con base de datos central, control de acceso real y
@@ -113,6 +114,72 @@ El acceso ya no usa credenciales compartidas. El circuito es:
 Si algo falla a mitad de la aprobación (por ejemplo, la cuenta se crea pero el perfil
 no), el proceso revierte lo ya hecho para no dejar grupos aprobados sin acceso.
 
+### Préstamos entre grupos
+
+1. El grupo crea un equipo incompleto y pide apoyo desde **Mis equipos**.
+2. El grupo aliado propone participantes, o rechaza indicando un motivo.
+3. El grupo solicitante acepta la propuesta.
+4. **La organización revisa y aprueba a los participantes externos.** Hasta ese
+   momento el equipo no puede pagar: sin este paso, dos grupos podían acordar un
+   préstamo entre ellos e inscribirlo sin que la organización se enterara.
+5. Si la organización rechaza, los prestados salen de la alineación y el equipo
+   vuelve a quedar incompleto, en lugar de aparecer completo pero bloqueado.
+
+---
+
+## Competencias, arbitraje y resultados
+
+Tres roles, no dos. El árbitro entra con su propia cuenta y solo ve lo que le
+asignaron.
+
+1. La organización registra a los árbitros en `/admin/arbitros` y les asigna los
+   deportes que pueden dirigir. El sistema crea la cuenta y envía la contraseña
+   por correo, igual que al aprobar un grupo.
+2. En `/admin/programacion` se genera el calendario:
+   - **Deportes grupales:** todos contra todos, un partido por cada pareja de
+     equipos completos.
+   - **Deportes individuales:** tandas del tamaño de `session_capacity`.
+   También se crean competencias a mano para finales y desempates.
+3. El árbitro registra el resultado desde `/arbitraje/competencias`. Cada deporte
+   define cómo se mide (`result_label`: goles, tiempo, puntos) y si gana el valor
+   más alto o más bajo (`result_order`), de modo que el podio de atletismo no
+   salga al revés que el de fútbol.
+4. Un resultado se guarda como **borrador** o se **publica**. Solo lo publicado
+   llega al portal público.
+5. `/resultados` es la única pantalla sin sesión: programación, tabla de
+   posiciones y clasificación general.
+
+Los grupos ven su propio calendario en `/panel/programacion`.
+
+### Por qué los resultados públicos son vistas y no tablas
+
+El portal lo consulta cualquiera, sin cuenta. En vez de abrir las tablas al rol
+anónimo y confiar en filtros, se exponen tres vistas (`public_schedule`,
+`public_standings`, `public_individual_ranking`) que solo contienen competencias
+con resultado publicado y nombres que ya son públicos. Ni documentos, ni correos,
+ni pagos, ni borradores: no están en la vista, así que no hay filtro que se pueda
+olvidar.
+
+---
+
+## Ramas y edad
+
+Las siete ramas reales del movimiento, cada una con su rango:
+
+| Rama | Edad |
+|---|---|
+| Cachorros | 5 a 6 |
+| Lobatos | 7 a 10 |
+| Webelos | 10 a 11 |
+| Scouts | 11 a 14 |
+| Nómadas Scout | 15 a 17 |
+| Rovers | 18 a 20 |
+| Consejeros y Dirigentes | 21 en adelante |
+
+La edad se valida al guardar cada participante, con un disparador en Postgres.
+Los rangos se solapan a propósito (Webelos 10–11 y Scouts 11–14): a los once años
+un chico puede estar en cualquiera de las dos, y eso lo decide su grupo.
+
 ---
 
 ## Arquitectura de seguridad
@@ -146,11 +213,14 @@ src/
 │   ├── (auth)/          Ingreso, registro público, cambio de contraseña
 │   ├── admin/           Panel de la organización
 │   ├── panel/           Panel de cada grupo scout
+│   ├── arbitraje/       Panel del árbitro
+│   ├── resultados/      Portal público, sin sesión
 │   └── layout.tsx
 ├── components/          Interfaz compartida, avisos, importador, tiempo real
 ├── lib/
 │   ├── auth/            Sesión del servidor y contraseñas temporales
-│   ├── domain/          Reglas puras: tarifas, elegibilidad, estados
+│   ├── competitions/    Lectura de la programación
+│   ├── domain/          Reglas puras: tarifas, elegibilidad, estados, competencias
 │   ├── email/           Resend y plantillas
 │   ├── import/          Analizadores de CSV y XLSX
 │   ├── supabase/        Clientes de navegador, servidor y servicio
@@ -189,13 +259,15 @@ _mock/                   Prototipo original, como referencia
 
 ## Pruebas
 
-102 pruebas en seis archivos:
+149 pruebas en siete archivos:
 
 - `tests/fees.test.ts` — tarifas y estados de inscripción.
 - `tests/eligibility.test.ts` — elegibilidad, alineaciones y cupos.
 - `tests/import.test.ts` — analizador de CSV, fechas y validación fila por fila.
 - `tests/env.test.ts` — normalización de la URL de Supabase.
 - `tests/routes.test.ts` — rutas internas y prevención de redirección abierta.
+- `tests/competitions.test.ts` — edad por rama, todos contra todos, ranking con
+  descalificados y tabla de posiciones.
 - `tests/database.test.ts` — **el esquema real**: las migraciones se aplican sobre
   PGlite (PostgreSQL compilado a WebAssembly) y se comprueba que los disparadores y
   restricciones rechacen lo que deben. No requiere base de datos remota.

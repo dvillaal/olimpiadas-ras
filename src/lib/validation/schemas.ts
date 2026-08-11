@@ -261,6 +261,121 @@ export const branchSchema = z.object({
   active: z.boolean().default(true),
 });
 
+// ─── Árbitros ────────────────────────────────────────────────────────────────
+
+export const refereeSchema = z.object({
+  // Vacío al crear; presente al editar uno existente.
+  id: z.uuid().optional(),
+  fullName: trimmed(3, 120, 'El nombre'),
+  email: z.email('Escribe un correo válido.'),
+  phone: optionalText(30),
+  notes: optionalText(500),
+  sportIds: z.array(z.uuid()).min(1, 'Asigna al menos un deporte.'),
+  active: z.boolean().default(true),
+});
+
+export type RefereeInput = z.infer<typeof refereeSchema>;
+
+// ─── Programación ────────────────────────────────────────────────────────────
+
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export const generateScheduleSchema = z.object({
+  sportId: z.uuid(),
+  branchId: z.string().trim().min(2),
+  date: z.string().regex(DATE, 'Escoge una fecha válida.'),
+  time: z.string().regex(TIME, 'Escoge una hora válida.'),
+  intervalMinutes: z.coerce
+    .number()
+    .int()
+    .min(5, 'Deja al menos cinco minutos entre competencias.')
+    .max(600),
+  venue: optionalText(120),
+  refereeId: z.union([z.uuid(), z.literal('')]).optional(),
+  // Permite armar el calendario sin esperar a que todos los pagos estén revisados.
+  includePending: z.boolean().default(false),
+});
+
+export const manualScheduleSchema = z
+  .object({
+    id: z.uuid().optional(),
+    sportId: z.uuid(),
+    branchId: z.string().trim().min(2),
+    label: trimmed(2, 80, 'El nombre de la competencia'),
+    date: z.string().regex(DATE, 'Escoge una fecha válida.'),
+    time: z.string().regex(TIME, 'Escoge una hora válida.'),
+    venue: optionalText(120),
+    refereeId: z.union([z.uuid(), z.literal('')]).optional(),
+    type: z.enum(['match', 'session']),
+    teamAId: z.union([z.uuid(), z.literal('')]).optional(),
+    teamBId: z.union([z.uuid(), z.literal('')]).optional(),
+    participantIds: z.array(z.uuid()).default([]),
+  })
+  .superRefine((value, ctx) => {
+    if (value.type === 'match') {
+      if (!value.teamAId || !value.teamBId) {
+        ctx.addIssue({ code: 'custom', path: ['teamAId'], message: 'Escoge los dos equipos.' });
+      } else if (value.teamAId === value.teamBId) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['teamBId'],
+          message: 'Un equipo no puede enfrentarse a sí mismo.',
+        });
+      }
+    } else if (!value.participantIds.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['participantIds'],
+        message: 'Escoge al menos un participante.',
+      });
+    }
+  });
+
+// ─── Resultados ──────────────────────────────────────────────────────────────
+
+export const matchResultSchema = z.object({
+  scheduleId: z.uuid(),
+  scoreA: z.coerce.number().int().min(0).max(999),
+  scoreB: z.coerce.number().int().min(0).max(999),
+  notes: optionalText(500),
+  publish: z.boolean().default(false),
+});
+
+export const sessionResultSchema = z.object({
+  scheduleId: z.uuid(),
+  entries: z
+    .array(
+      z.object({
+        participantId: z.uuid(),
+        // Vacío = sin marca todavía. No es lo mismo que un cero.
+        value: z.union([z.coerce.number(), z.literal('')]).optional(),
+        disqualified: z.boolean().default(false),
+      }),
+    )
+    .default([]),
+  notes: optionalText(500),
+  publish: z.boolean().default(false),
+});
+
+// ─── Revisión de alianzas ────────────────────────────────────────────────────
+
+export const reviewIntergroupSchema = z
+  .object({
+    requestId: z.uuid(),
+    decision: z.enum(['approve', 'reject']),
+    note: optionalText(500),
+  })
+  .superRefine((value, ctx) => {
+    if (value.decision === 'reject' && !value.note.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['note'],
+        message: 'Explica por qué se rechaza: el motivo se envía a los dos grupos.',
+      });
+    }
+  });
+
 /** Extrae el primer mensaje de error de cada campo, listo para el formulario. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};

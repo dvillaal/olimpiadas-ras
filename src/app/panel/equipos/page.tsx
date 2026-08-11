@@ -81,6 +81,19 @@ export default async function GroupTeamsPage() {
               (r) => r.team_id === team.id && ['pending', 'proposed'].includes(r.status),
             );
 
+            // Los prestados solo cuentan cuando la organización los aprobó. Sin
+            // eso el equipo se ve completo pero el pago está bloqueado, y hay
+            // que decirlo aquí en lugar de dejar que lo descubra al intentarlo.
+            const external = starters.filter(
+              (m) => participantById.get(m.participant_id)?.group_id !== group.id,
+            );
+            const allianceReview = (requests ?? []).find(
+              (r) => r.team_id === team.id && r.status === 'admin_review',
+            );
+            const allianceRejected = (requests ?? []).find(
+              (r) => r.team_id === team.id && r.status === 'admin_rejected',
+            );
+
             return (
               <li key={team.id}>
                 <Panel>
@@ -113,6 +126,20 @@ export default async function GroupTeamsPage() {
                         </>
                       )}
                       {openRequest && ' Ya tienes una solicitud de apoyo en curso.'}
+                    </Alert>
+                  )}
+
+                  {allianceReview && (
+                    <Alert tone="warning" title="Alianza en revisión" className="mb-3">
+                      La organización está verificando a {external.length} participante(s) de otro
+                      grupo. El pago del equipo se habilita cuando la aprueben.
+                    </Alert>
+                  )}
+
+                  {allianceRejected && allianceRejected.admin_note && (
+                    <Alert tone="error" title="Alianza rechazada" className="mb-3">
+                      {allianceRejected.admin_note} Los participantes prestados salieron de la
+                      alineación.
                     </Alert>
                   )}
 
