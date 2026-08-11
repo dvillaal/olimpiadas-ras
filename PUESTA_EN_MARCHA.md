@@ -12,12 +12,14 @@ cd C:\Users\USUARIO\Documents\Proyectos\Olimpiadas_Scouts_Local
 ## Paso 0 · Comprobar requisitos
 
 ```powershell
-node --version    # debe decir v20 o superior
+node --version    # debe decir v22 o superior
 npm --version
 git --version
 ```
 
-Si Node es menor que 20, descárgalo de <https://nodejs.org> (versión LTS).
+Si Node es menor que 22, actualízalo desde <https://nodejs.org> (versión LTS).
+`@supabase/supabase-js` exige Node 22; con versiones anteriores verás avisos
+`EBADENGINE` durante la instalación.
 
 ---
 
@@ -43,7 +45,7 @@ npm run db:validate
 npm test
 ```
 
-Resultado esperado: sin errores y `86 passed` en las pruebas.
+Resultado esperado: sin errores y `102 passed` en las pruebas.
 
 ---
 
@@ -69,11 +71,24 @@ En el panel de Supabase ve a **Project Settings → API** y copia:
 
 | Variable en `.env.local` | Dónde está en Supabase |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | **Project URL** — solo el dominio |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project API keys → `anon` `public` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Project API keys → `service_role` (pulsa *Reveal*) |
 
 Deja `NEXT_PUBLIC_SITE_URL=http://localhost:3000` por ahora.
+
+> **Cuidado con la URL.** Debe ser solo el dominio:
+>
+> ```
+> ✅ NEXT_PUBLIC_SUPABASE_URL="https://abcdefghijklmnop.supabase.co"
+> ❌ NEXT_PUBLIC_SUPABASE_URL="https://abcdefghijklmnop.supabase.co/rest/v1/"
+> ```
+>
+> La segunda es la *Data API URL*, que aparece muy cerca en el panel. Si la
+> copias, verás el error `Invalid path specified in request URL`.
+
+El archivo puede llamarse `.env` o `.env.local`; los dos funcionan y ambos están
+excluidos de git.
 
 > La clave `service_role` salta todas las reglas de seguridad. Nunca la subas a
 > git ni la pegues en el navegador. El archivo `.env.local` ya está en
@@ -198,7 +213,7 @@ dominio a *Site URL* y a *Redirect URLs*.
 | `npm start` | Sirve la compilación de producción |
 | `npm run typecheck` | Revisa los tipos de TypeScript |
 | `npm run lint` | Revisa el estilo del código |
-| `npm test` | Ejecuta las 86 pruebas |
+| `npm test` | Ejecuta las 102 pruebas |
 | `npm run test:watch` | Pruebas en modo continuo mientras editas |
 | `npm run db:validate` | Valida el SQL sin conectarse a nada |
 | `npm run db:link` | Enlaza la carpeta con tu proyecto de Supabase |
@@ -214,8 +229,11 @@ dominio a *Site URL* y a *Redirect URLs*.
 | Síntoma | Causa probable | Qué hacer |
 |---|---|---|
 | `Falta SUPABASE_SERVICE_ROLE_KEY` | `.env.local` incompleto o mal escrito | Revisa el paso 4 y reinicia `npm run dev` |
+| `Invalid path specified in request URL` | La URL trae `/rest/v1/` u otra ruta | Déjala solo con el dominio (paso 4) |
 | `No se pudo leer la configuración del evento` | El seed no se aplicó | Ejecuta `npm run db:seed` |
 | `supabase: command not found` | La CLI no está instalada | Usa `npx supabase ...` (ya viene como dependencia) |
 | `Cannot find module` tras actualizar | `node_modules` desactualizado | Borra `node_modules` y ejecuta `npm install` |
+| `npm ci` falla con `EUSAGE ... not in sync` | Cambió `package.json` sin regenerar el lockfile | Ejecuta `npm install` y sube el `package-lock.json` actualizado |
+| Avisos `EBADENGINE` al instalar | Node menor que 22 | Actualiza Node (paso 0) |
 | El correo de aprobación no llega | Resend sin configurar | Es normal: la contraseña sale en la consola y en el mensaje de confirmación |
 | Cambios en `.env.local` sin efecto | El servidor no releyó las variables | Detén con `Ctrl+C` y vuelve a `npm run dev` |
