@@ -3,7 +3,8 @@ import { requireGroup, getSettings } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { formatCOP } from '@/lib/domain/fees';
 import { computeGroupProgress, registrationStatusView } from '@/lib/domain/status';
-import { flagOf, formatRelative } from '@/lib/utils';
+import { formatRelative } from '@/lib/utils';
+import { CountryFlag } from '@/components/country-flag';
 import {
   Alert,
   EmptyState,
@@ -89,9 +90,7 @@ export default async function PanelHomePage() {
         actions={
           group.country_code ? (
             <span className="flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5">
-              <span aria-hidden className="text-2xl">
-                {flagOf(group.country_code)}
-              </span>
+              {country && <CountryFlag code={group.country_code} name={country.name} size="sm" />}
               <b className="text-navy">{country?.name}</b>
             </span>
           ) : (

@@ -5,8 +5,8 @@ import { useFormStatus } from 'react-dom';
 import { claimCountryAction } from '../actions';
 import type { ActionState } from '@/app/(auth)/actions';
 import { Alert, Badge, Button, EmptyState } from '@/components/ui';
+import { CountryFlag } from '@/components/country-flag';
 import { useActionResult } from '@/lib/hooks/use-action-result';
-import { flagOf } from '@/lib/utils';
 
 export interface PickableCountry {
   code: string;
@@ -69,9 +69,7 @@ export function CountryPicker({
       {selected && (
         <div className="mb-5 rounded-2xl border-2 border-scout-400 bg-scout-50 p-5">
           <div className="flex flex-wrap items-center gap-4">
-            <span aria-hidden className="text-5xl leading-none">
-              {flagOf(selected.code)}
-            </span>
+            <CountryFlag code={selected.code} name={selected.name} size="lg" />
             <div className="min-w-0 flex-1">
               <p className="text-lg font-extrabold text-navy">{selected.name}</p>
               <p className="text-sm text-slate-600">
@@ -133,9 +131,7 @@ export function CountryPicker({
                         : 'cursor-not-allowed border-line bg-slate-50 opacity-70'
                   }`}
                 >
-                  <span aria-hidden className="text-3xl leading-none">
-                    {flagOf(country.code)}
-                  </span>
+                  <CountryFlag code={country.code} name={country.name} size="md" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-bold text-navy">{country.name}</span>
                     <span className="mt-1 block">

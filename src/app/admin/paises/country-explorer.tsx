@@ -1,8 +1,8 @@
 'use client';
 
 import { useDeferredValue, useMemo, useState } from 'react';
-import { flagOf } from '@/lib/utils';
 import { Badge, Button, EmptyState } from '@/components/ui';
+import { CountryFlag } from '@/components/country-flag';
 import { releaseCountryAction, toggleCountryReservationAction } from '../actions';
 
 export interface CountryRow {
@@ -92,9 +92,7 @@ export function CountryExplorer({ countries }: { countries: CountryRow[] }) {
           {visible.map((country) => (
             <li key={country.code} className="rounded-2xl border border-line p-3.5">
               <div className="flex items-start gap-3">
-                <span aria-hidden className="text-3xl leading-none">
-                  {flagOf(country.code)}
-                </span>
+                <CountryFlag code={country.code} name={country.name} size="lg" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold text-navy">{country.name}</p>
                   <p className="font-mono text-xs text-slate-400">{country.code}</p>

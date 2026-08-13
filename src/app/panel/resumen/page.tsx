@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { formatCOP, sportFee } from '@/lib/domain/fees';
 import { computeGroupProgress, registrationStatusView } from '@/lib/domain/status';
 import { ageAt } from '@/lib/domain/eligibility';
-import { flagOf, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
+import { CountryFlag } from '@/components/country-flag';
 import {
   Alert,
   Badge,
@@ -100,10 +101,8 @@ export default async function GroupSummaryPage() {
 
       <Panel className="mb-5">
         <div className="flex flex-wrap items-center gap-5">
-          {group.country_code && (
-            <span aria-hidden className="text-5xl leading-none">
-              {flagOf(group.country_code)}
-            </span>
+          {group.country_code && country && (
+            <CountryFlag code={group.country_code} name={country.name} size="lg" />
           )}
           <div className="min-w-0 flex-1">
             <h2 className="text-2xl font-extrabold text-navy">{group.name}</h2>

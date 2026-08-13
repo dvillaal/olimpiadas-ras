@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { requireGroup } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
-import { flagOf } from '@/lib/utils';
 import { Alert, PageHeader, Panel } from '@/components/ui';
+import { CountryFlag } from '@/components/country-flag';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
 import { CountryPicker } from './country-picker';
 
@@ -36,9 +36,7 @@ export default async function GroupCountryPage() {
       {mine ? (
         <Panel className="mb-6">
           <div className="flex flex-wrap items-center gap-5">
-            <span aria-hidden className="text-6xl leading-none">
-              {flagOf(mine.code)}
-            </span>
+            <CountryFlag code={mine.code} name={mine.name} size="lg" />
             <div>
               <span className="kicker">Su país</span>
               <h3 className="text-2xl font-extrabold text-navy">{mine.name}</h3>

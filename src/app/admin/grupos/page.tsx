@@ -3,8 +3,9 @@ import { requireAdmin } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { groupStatusView } from '@/lib/domain/status';
 import { formatCOP } from '@/lib/domain/fees';
-import { flagOf, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { EmptyState, PageHeader, Panel, StatCard, StatusBadge } from '@/components/ui';
+import { CountryFlag } from '@/components/country-flag';
 import { GroupRowActions } from './group-row-actions';
 
 export const metadata: Metadata = { title: 'Grupos' };
@@ -108,9 +109,11 @@ export default async function AdminGroupsPage() {
                     <td className="whitespace-nowrap">
                       {group.country_code ? (
                         <span className="inline-flex items-center gap-1.5">
-                          <span aria-hidden className="text-lg">
-                            {flagOf(group.country_code)}
-                          </span>
+                          <CountryFlag
+                            code={group.country_code}
+                            name={countryName.get(group.country_code) ?? group.country_code}
+                            size="sm"
+                          />
                           {countryName.get(group.country_code) ?? group.country_code}
                         </span>
                       ) : (
