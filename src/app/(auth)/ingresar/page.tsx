@@ -1,9 +1,18 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
+import localFont from 'next/font/local';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { LoginForm } from './login-form';
 
 export const metadata: Metadata = { title: 'Ingresar' };
+
+/** Tipografía de la portada: FatFrank, provista por la organización. */
+const display = localFont({
+  src: '../../../../public/fonts/FatFrank.otf',
+  variable: '--font-display',
+  display: 'swap',
+});
 
 async function getEventName(): Promise<string> {
   try {
@@ -26,43 +35,58 @@ export default async function LoginPage({
   return (
     <main id="contenido" className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
       {/* Panel de marca: se oculta en móvil para dejar el formulario arriba. */}
-      <section className="relative hidden flex-col justify-center overflow-hidden bg-gradient-to-br from-scout-700 to-scout-500 p-16 text-white lg:flex">
-        <span
+      <section
+        className={`${display.variable} relative hidden flex-col justify-center overflow-hidden bg-scout-500 text-white lg:flex`}
+      >
+        <h1 className="sr-only">{eventName}</h1>
+
+        {/* Palabra gigante de fondo, centrada, a modo de textura de marca. */}
+        <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-32 -right-12 select-none text-[380px] leading-none opacity-10"
+          className="pointer-events-none absolute inset-0 flex -translate-y-[10%] select-none flex-col items-center justify-center overflow-hidden text-center font-[family-name:var(--font-display)] font-extrabold uppercase text-scout-400/80"
+          style={{ fontSize: 'clamp(110px, 14vw, 230px)', lineHeight: 0.85 }}
         >
-          ⚜
-        </span>
-        <div className="relative">
-          <div className="mb-9 flex items-center gap-3 text-xl font-black">
-            <span className="grid size-12 place-items-center rounded-2xl bg-white text-2xl text-scout-600">
-              ⚜
-            </span>
-            {eventName}
-          </div>
-          <h1 className="max-w-lg text-5xl font-black leading-[1.05]">
-            Competimos con alegría.
-            <br />
-            Crecemos en equipo.
-          </h1>
-          <p className="mt-5 max-w-md text-lg text-white/85">
-            Gestiona países, participantes, deportes, equipos intergrupales, pagos y stands desde un
-            solo lugar.
-          </p>
-          <ul className="mt-8 flex flex-wrap gap-2 text-sm font-semibold">
-            {['🌍 Países disponibles', '🤝 Equipos entre grupos', '💳 Pagos y comprobantes'].map(
-              (pill) => (
-                <li key={pill} className="rounded-full bg-white/15 px-3.5 py-1.5 backdrop-blur">
-                  {pill}
-                </li>
-              ),
-            )}
-          </ul>
+          <span className="block">¡Olim</span>
+          <span className="block">pia</span>
+          <span className="block">das!</span>
+        </div>
+
+        {/* Trofeo, centrado y con una leve rotación, superpuesto al texto. */}
+        <Image
+          src="/login/trofeo.png"
+          alt=""
+          aria-hidden
+          width={552}
+          height={1080}
+          priority
+          className="pointer-events-none absolute left-1/2 top-[50%] h-[74%] w-auto -translate-x-1/2 -translate-y-1/2
+                     -rotate-6 select-none drop-shadow-2xl z-20"
+        />
+
+        {/* Insignia con los logos de la organización. */}
+        <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-[28px] bg-plum px-8 py-5 shadow-[var(--shadow-float)]">
+          <Image
+            src="/login/logos-ras.png"
+            alt="Scouts de Colombia y Antioquia Scout"
+            width={1309}
+            height={290}
+            className="h-16 w-auto z-10"
+          />
         </div>
       </section>
 
-      <section className="flex items-center justify-center bg-canvas px-5 py-12">
-        <div className="w-full max-w-md">
+      <section className="relative flex items-center justify-center overflow-hidden bg-canvas px-5 py-12">
+        {/* Garabatos decorativos: se asoman por los bordes, detrás de la tarjeta. */}
+        <Image
+          src="/login/fondo.png"
+          alt=""
+          aria-hidden
+          width={439}
+          height={1080}
+          className="pointer-events-none absolute right-0 top-0 hidden h-full w-auto max-w-none select-none lg:block"
+        />
+
+        <div className="relative z-10 w-full max-w-md">
           <div className="mb-6 flex items-center gap-2.5 text-lg font-black text-scout-700 lg:hidden">
             <span className="grid size-10 place-items-center rounded-xl bg-scout-600 text-xl text-white">
               ⚜

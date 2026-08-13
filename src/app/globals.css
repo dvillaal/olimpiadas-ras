@@ -24,11 +24,16 @@
   --color-line: #dbe5df;
   --color-canvas: #f3f7f4;
 
+  /* Insignia morada de la portada de acceso (logos Scouts de Colombia / Antioquia Scout). */
+  --color-plum: #4a2a78;
+
   --radius-card: 18px;
   --shadow-card: 0 4px 15px rgba(24, 52, 79, 0.05);
   --shadow-float: 0 14px 38px rgba(24, 52, 79, 0.1);
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* --font-display (FatFrank) se resuelve con next/font/local en
+     src/app/(auth)/ingresar/page.tsx, a partir de public/fonts/FatFrank.otf. */
 }
 
 @layer base {
