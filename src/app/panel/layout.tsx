@@ -31,7 +31,6 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const nav: NavItem[] = [
     { href: '/panel', icon: '🏠', label: 'Inicio', badge: unreadNotifications ?? 0 },
     { href: '/panel/pais', icon: '🌍', label: 'Escoger país' },
-    { href: '/panel/participantes', icon: '👥', label: 'Mis participantes' },
     { href: '/panel/deportes', icon: '🏅', label: 'Deportes' },
     { href: '/panel/equipos', icon: '🤝', label: 'Mis equipos' },
     { href: '/panel/solicitudes', icon: '🔄', label: 'Intergrupales', badge: pendingRequests ?? 0 },

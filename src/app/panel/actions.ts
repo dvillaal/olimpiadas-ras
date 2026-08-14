@@ -8,7 +8,6 @@ import {
   fieldErrors,
   intergroupProposalSchema,
   intergroupRequestSchema,
-  participantSchema,
   paymentSchema,
   standSchema,
   teamSchema,
@@ -49,79 +48,6 @@ export async function claimCountryAction(
   revalidatePath('/panel/pais');
   revalidatePath('/panel');
   return { ok: true, message: '¡País confirmado!' };
-}
-
-// ─── Participantes propios ───────────────────────────────────────────────────
-
-export async function saveOwnParticipantAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const { group } = await requireGroup();
-
-  const parsed = participantSchema.safeParse({
-    id: formData.get('id') || undefined,
-    // El grupo se impone desde la sesión: no se acepta del formulario.
-    groupId: group.id,
-    docType: formData.get('docType'),
-    document: formData.get('document'),
-    firstNames: formData.get('firstNames'),
-    lastNames: formData.get('lastNames'),
-    birthdate: formData.get('birthdate'),
-    branchId: formData.get('branchId'),
-    gender: formData.get('gender') || undefined,
-    phone: formData.get('phone') ?? '',
-    email: formData.get('email') ?? '',
-    active: formData.get('active') !== 'false',
-    notes: formData.get('notes') ?? '',
-  });
-
-  if (!parsed.success) return { errors: fieldErrors(parsed.error) };
-
-  const input = parsed.data;
-  const supabase = await createClient();
-
-  const row = {
-    group_id: group.id,
-    doc_type: input.docType,
-    document: input.document,
-    first_names: input.firstNames,
-    last_names: input.lastNames,
-    birthdate: input.birthdate,
-    branch_id: input.branchId,
-    gender: input.gender ?? null,
-    phone: input.phone ?? '',
-    email: input.email || null,
-    active: input.active,
-    notes: input.notes,
-  };
-
-  const { error } = input.id
-    ? await supabase.from('participants').update(row).eq('id', input.id).eq('group_id', group.id)
-    : await supabase.from('participants').insert(row);
-
-  if (error) {
-    if (error.code === '23505') {
-      return { errors: { document: 'Ese documento ya está registrado.' } };
-    }
-    return { errors: { _: friendlyError(error) } };
-  }
-
-  revalidatePath('/panel/participantes');
-  return { ok: true, message: `${input.firstNames} ${input.lastNames} guardado.` };
-}
-
-export async function deleteOwnParticipantAction(formData: FormData): Promise<void> {
-  const { group } = await requireGroup();
-  const supabase = await createClient();
-
-  await supabase
-    .from('participants')
-    .delete()
-    .eq('id', String(formData.get('id') ?? ''))
-    .eq('group_id', group.id);
-
-  revalidatePath('/panel/participantes');
 }
 
 // ─── Equipos ─────────────────────────────────────────────────────────────────

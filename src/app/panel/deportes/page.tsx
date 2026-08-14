@@ -93,10 +93,8 @@ export default async function GroupSportsPage() {
 
       {noParticipants && (
         <Alert tone="info">
-          Todavía no tienes participantes registrados.{' '}
-          <LinkButton href="/panel/participantes" size="sm" variant="secondary" className="ml-1">
-            Registrarlos
-          </LinkButton>
+          Todavía no tienes participantes registrados. La organización es quien los carga: si
+          falta alguien, escríbeles para que lo agreguen.
         </Alert>
       )}
 

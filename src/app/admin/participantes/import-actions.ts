@@ -138,7 +138,6 @@ export async function confirmImportAction(
   });
 
   revalidatePath('/admin/participantes');
-  revalidatePath('/panel/participantes');
 
   return {
     inserted,
