@@ -166,7 +166,7 @@ export default async function PanelHomePage() {
               )}
 
               {/* ─── Primeros pasos ──────────────────────────────────────── */}
-              <section className="flex flex-col rounded-3xl bg-scout-600 p-6 text-white">
+              <section className="flex flex-col rounded-3xl bg-plum p-6 text-white">
                 <div className="mb-1 flex items-start justify-between gap-3">
                   <div>
                     <h3 className={cardTitle}>Primeros pasos</h3>
@@ -214,7 +214,7 @@ export default async function PanelHomePage() {
             </div>
 
             {/* ─── Avisos ──────────────────────────────────────────────── */}
-            <section className="rounded-3xl bg-plum p-6 text-white">
+            <section className="rounded-3xl bg-scout-600 p-6 text-white">
               <h3 className={cardTitle}>Avisos{unreadCount > 0 ? ` (${unreadCount})` : ''}</h3>
               <p className="mb-4 text-sm text-white/75">Novedades sobre tus pagos y solicitudes.</p>
 
