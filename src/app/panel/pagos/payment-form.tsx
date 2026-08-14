@@ -45,6 +45,10 @@ export function PaymentForm({
   const errors = state.errors ?? {};
   const difference = Number(amount) - expectedAmount;
   const today = new Date().toISOString().slice(0, 10);
+  const inputClass =
+    'w-full rounded-xl border border-white/30 bg-white/10 px-3.5 py-2.5 text-[15px] text-white ' +
+    'transition-colors placeholder:text-white/50 focus:border-white/60 focus:outline-none ' +
+    'focus:ring-2 focus:ring-white/20';
 
   if (!open) {
     return (
@@ -80,6 +84,7 @@ export function PaymentForm({
               : undefined
           }
           required
+          className="[&_.field-label]:text-white [&_p]:text-white/70"
         >
           <input
             id={`amount-${payableId}`}
@@ -87,7 +92,7 @@ export function PaymentForm({
             type="number"
             min={1}
             required
-            className="field-input"
+            className={inputClass}
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
           />
@@ -98,6 +103,7 @@ export function PaymentForm({
           htmlFor={`date-${payableId}`}
           error={errors.paymentDate}
           required
+          className="[&_.field-label]:text-white"
         >
           <input
             id={`date-${payableId}`}
@@ -106,7 +112,7 @@ export function PaymentForm({
             max={today}
             defaultValue={today}
             required
-            className="field-input"
+            className={inputClass}
           />
         </Field>
       </div>
@@ -117,12 +123,13 @@ export function PaymentForm({
         error={errors.reference}
         hint="El número que aparece en el recibo o en la transferencia. No puede repetirse."
         required
+        className="[&_.field-label]:text-white [&_p]:text-white/60"
       >
         <input
           id={`reference-${payableId}`}
           name="reference"
           required
-          className="field-input font-mono"
+          className={`${inputClass} font-mono`}
           minLength={4}
         />
       </Field>
@@ -133,23 +140,30 @@ export function PaymentForm({
           htmlFor={`payer-${payableId}`}
           error={errors.payerName}
           required
+          className="[&_.field-label]:text-white"
         >
-          <input id={`payer-${payableId}`} name="payerName" required className="field-input" />
+          <input id={`payer-${payableId}`} name="payerName" required className={inputClass} />
         </Field>
         <Field
           label="Documento de quien pagó"
           htmlFor={`payerDoc-${payableId}`}
           error={errors.payerDocument}
+          className="[&_.field-label]:text-white"
         >
-          <input id={`payerDoc-${payableId}`} name="payerDocument" className="field-input" />
+          <input id={`payerDoc-${payableId}`} name="payerDocument" className={inputClass} />
         </Field>
       </div>
 
-      <Field label="Banco de origen" htmlFor={`bank-${payableId}`} error={errors.originBank}>
+      <Field
+        label="Banco de origen"
+        htmlFor={`bank-${payableId}`}
+        error={errors.originBank}
+        className="[&_.field-label]:text-white"
+      >
         <input
           id={`bank-${payableId}`}
           name="originBank"
-          className="field-input"
+          className={inputClass}
           placeholder="Bancolombia, Nequi, Davivienda…"
         />
       </Field>
@@ -160,6 +174,7 @@ export function PaymentForm({
         error={errors.proof}
         hint={`PDF, JPG, PNG o WEBP. Máximo ${maxProofMb} MB.`}
         required
+        className="[&_.field-label]:text-white [&_p]:text-white/60"
       >
         <input
           id={`proof-${payableId}`}
@@ -167,30 +182,40 @@ export function PaymentForm({
           type="file"
           accept="application/pdf,image/jpeg,image/png,image/webp"
           required
-          className="field-input file:mr-3 file:rounded-lg file:border-0 file:bg-scout-50
-                     file:px-3 file:py-1.5 file:font-semibold file:text-scout-700"
+          className={`${inputClass} file:mr-3 file:rounded-lg file:border-0 file:bg-white/20
+                     file:px-3 file:py-1.5 file:font-semibold file:text-white`}
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         />
         {file && (
-          <p className="mt-1.5 text-xs text-slate-500">
+          <p className="mt-1.5 text-xs text-white/70">
             {file.name} · {formatBytes(file.size)}
           </p>
         )}
       </Field>
 
-      <Field label="Observaciones" htmlFor={`notes-${payableId}`} error={errors.notes}>
+      <Field
+        label="Observaciones"
+        htmlFor={`notes-${payableId}`}
+        error={errors.notes}
+        className="[&_.field-label]:text-white"
+      >
         <textarea
           id={`notes-${payableId}`}
           name="notes"
           rows={2}
-          className="field-input resize-y"
+          className={`${inputClass} resize-y`}
           placeholder="Cualquier detalle que la organización deba saber."
         />
       </Field>
 
       <div className="flex flex-wrap gap-2">
         <SubmitButton />
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => setOpen(false)}
+          className="!border-white/40 !text-white hover:!bg-white/10"
+        >
           Cancelar
         </Button>
       </div>

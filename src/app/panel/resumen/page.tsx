@@ -6,15 +6,8 @@ import { computeGroupProgress, registrationStatusView } from '@/lib/domain/statu
 import { ageAt } from '@/lib/domain/eligibility';
 import { formatDate } from '@/lib/utils';
 import { CountryFlag } from '@/components/country-flag';
-import {
-  Alert,
-  Badge,
-  EmptyState,
-  PageHeader,
-  Panel,
-  ProgressBar,
-  StatusBadge,
-} from '@/components/ui';
+import { Alert, Badge, ProgressBar, StatusBadge } from '@/components/ui';
+import { cardTitleClass } from '@/lib/fonts';
 import { PrintButton } from './print-button';
 
 export const metadata: Metadata = { title: 'Resumen' };
@@ -92,106 +85,115 @@ export default async function GroupSummaryPage() {
   const balance = committed - paid;
 
   return (
-    <>
-      <PageHeader
-        title="Resumen de inscripción"
-        description="Todo lo que tu grupo ha inscrito, en una sola hoja."
-        actions={<PrintButton />}
-      />
+    <div className="print-surface min-w-0 space-y-5">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-plum px-6 py-5 text-white sm:px-8 sm:py-6">
+        <div>
+          <h1 className={cardTitleClass}>Resumen de inscripción</h1>
+          <p className="mt-1 text-sm text-white/75">
+            Todo lo que tu grupo ha inscrito, en una sola hoja.
+          </p>
+        </div>
+        <PrintButton />
+      </section>
 
-      <Panel className="mb-5">
+      <section className="rounded-3xl bg-scout-600 p-5 text-white">
         <div className="flex flex-wrap items-center gap-5">
           {group.country_code && country && (
             <CountryFlag code={group.country_code} name={country.name} size="lg" />
           )}
           <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-extrabold text-navy">{group.name}</h2>
-            <p className="text-slate-500">
+            <h2 className={cardTitleClass}>{group.name}</h2>
+            <p className="text-white/75">
               {group.code && <span className="font-mono">{group.code}</span>}
               {country?.name && ` · representa a ${country.name}`}
               {group.city && ` · ${group.city}`}
             </p>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-white/75">
               Responsable: {group.leader_name} · {group.leader_email}
             </p>
           </div>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 [&_*]:!text-white">
           <ProgressBar percent={progress.percent} label="Avance de la inscripción" />
         </div>
-      </Panel>
+      </section>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
-        <div className="panel">
-          <span className="text-sm text-slate-500">Total comprometido</span>
-          <b className="mt-1 block text-2xl text-navy">{formatCOP(committed)}</b>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl bg-plum p-4 text-white">
+          <span className="text-sm text-white/75">Total comprometido</span>
+          <b className="mt-1 block text-2xl">{formatCOP(committed)}</b>
         </div>
-        <div className="panel">
-          <span className="text-sm text-slate-500">Pagado y aprobado</span>
-          <b className="mt-1 block text-2xl text-scout-700">{formatCOP(paid)}</b>
+        <div className="rounded-2xl bg-scout-600 p-4 text-white">
+          <span className="text-sm text-white/75">Pagado y aprobado</span>
+          <b className="mt-1 block text-2xl">{formatCOP(paid)}</b>
         </div>
-        <div className="panel">
-          <span className="text-sm text-slate-500">Saldo</span>
-          <b
-            className={`mt-1 block text-2xl ${balance > 0 ? 'text-amber-700' : 'text-scout-700'}`}
-          >
+        <div className="rounded-2xl bg-plum p-4 text-white">
+          <span className="text-sm text-white/75">Saldo</span>
+          <b className={`mt-1 block text-2xl ${balance > 0 ? 'text-amber-300' : 'text-white'}`}>
             {formatCOP(Math.max(0, balance))}
           </b>
         </div>
       </div>
 
       {balance > 0 && (
-        <Alert tone="warning" className="mb-5 no-print">
+        <Alert tone="warning" className="no-print">
           Todavía queda un saldo de <b>{formatCOP(balance)}</b> por pagar o por aprobar.
         </Alert>
       )}
 
-      <Panel title={`Participantes activos (${activeParticipants.length})`} className="mb-5">
+      <section className="rounded-3xl bg-scout-600 p-5 text-white">
+        <h3 className={`mb-3 ${cardTitleClass}`}>
+          Participantes activos ({activeParticipants.length})
+        </h3>
         {activeParticipants.length === 0 ? (
-          <EmptyState icon="👥" title="Sin participantes registrados" />
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Rama</th>
-                  <th className="text-right">Edad</th>
-                  <th>Nacimiento</th>
-                  <th>Observaciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeParticipants.map((participant) => (
-                  <tr key={participant.id}>
-                    <td className="font-semibold text-navy">{participant.full_name}</td>
-                    <td>{branchName.get(participant.branch_id) ?? participant.branch_id}</td>
-                    <td className="text-right">{ageAt(participant.birthdate)}</td>
-                    <td className="whitespace-nowrap text-xs">
-                      {formatDate(participant.birthdate)}
-                    </td>
-                    <td className="text-xs text-slate-500">{participant.notes || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="rounded-2xl border border-dashed border-white/30 px-4 py-8 text-center">
+            <span className="mb-2 block text-3xl" aria-hidden>
+              👥
+            </span>
+            <p className="font-semibold text-white">Sin participantes registrados</p>
           </div>
+        ) : (
+          <ul className="space-y-2">
+            {activeParticipants.map((participant) => (
+              <li
+                key={participant.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/20 bg-white/10 p-3"
+              >
+                <div className="min-w-0">
+                  <b className="block truncate text-white">{participant.full_name}</b>
+                  <p className="text-xs text-white/70">
+                    {branchName.get(participant.branch_id) ?? participant.branch_id} ·{' '}
+                    {ageAt(participant.birthdate)} años · {formatDate(participant.birthdate)}
+                  </p>
+                </div>
+                {participant.notes && (
+                  <p className="text-xs text-white/60">{participant.notes}</p>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
-      </Panel>
+      </section>
 
-      <Panel title={`Equipos (${teamRows.length})`} className="mb-5">
+      <section className="rounded-3xl bg-plum p-5 text-white">
+        <h3 className={`mb-3 ${cardTitleClass}`}>Equipos ({teamRows.length})</h3>
         {teamRows.length === 0 ? (
-          <EmptyState icon="🤝" title="Sin equipos inscritos" />
+          <div className="rounded-2xl border border-dashed border-white/25 px-4 py-8 text-center">
+            <span className="mb-2 block text-3xl" aria-hidden>
+              🤝
+            </span>
+            <p className="font-semibold text-white">Sin equipos inscritos</p>
+          </div>
         ) : (
           <ul className="space-y-4">
             {teamRows.map((team) => {
               const sport = sportById.get(team.sport_id);
               const roster = (members ?? []).filter((m) => m.team_id === team.id);
               return (
-                <li key={team.id} className="rounded-xl border border-line p-3.5">
+                <li key={team.id} className="rounded-xl border border-white/20 bg-white/10 p-3.5">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <b className="text-navy">
+                    <b className="text-white">
                       {sport?.icon} {team.name}
                     </b>
                     <StatusBadge status={registrationStatusView(team.status)} />
@@ -205,7 +207,7 @@ export default async function GroupSummaryPage() {
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-2 text-sm text-white/75">
                     {sport?.name} · {sport ? formatCOP(sportFee(sport, settings)) : '—'}
                   </p>
                 </li>
@@ -213,11 +215,19 @@ export default async function GroupSummaryPage() {
             })}
           </ul>
         )}
-      </Panel>
+      </section>
 
-      <Panel title={`Inscripciones individuales (${individualRows.length})`} className="mb-5">
+      <section className="rounded-3xl bg-scout-600 p-5 text-white">
+        <h3 className={`mb-3 ${cardTitleClass}`}>
+          Inscripciones individuales ({individualRows.length})
+        </h3>
         {individualRows.length === 0 ? (
-          <EmptyState icon="🏅" title="Sin inscripciones individuales" />
+          <div className="rounded-2xl border border-dashed border-white/30 px-4 py-8 text-center">
+            <span className="mb-2 block text-3xl" aria-hidden>
+              🏅
+            </span>
+            <p className="font-semibold text-white">Sin inscripciones individuales</p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {individualRows.map((registration) => {
@@ -225,9 +235,12 @@ export default async function GroupSummaryPage() {
                 (link) => link.registration_id === registration.id,
               );
               return (
-                <li key={registration.id} className="rounded-xl border border-line p-3.5">
+                <li
+                  key={registration.id}
+                  className="rounded-xl border border-white/20 bg-white/10 p-3.5"
+                >
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <b className="text-navy">
+                    <b className="text-white">
                       {sportById.get(registration.sport_id)?.icon}{' '}
                       {sportById.get(registration.sport_id)?.name}
                     </b>
@@ -242,7 +255,7 @@ export default async function GroupSummaryPage() {
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-2 text-sm text-white/75">
                     {formatCOP(Number(registration.amount))}
                   </p>
                 </li>
@@ -250,65 +263,62 @@ export default async function GroupSummaryPage() {
             })}
           </ul>
         )}
-      </Panel>
+      </section>
 
       {stand && (
-        <Panel title="Stand de ventas" className="mb-5">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <b className="text-navy">{stand.name}</b>
+        <section className="rounded-3xl bg-plum p-5 text-white">
+          <h3 className={cardTitleClass}>Stand de ventas</h3>
+          <div className="mt-2 mb-2 flex flex-wrap items-center justify-between gap-2">
+            <b className="text-white">{stand.name}</b>
             <StatusBadge status={registrationStatusView(stand.status)} />
           </div>
-          <p className="text-sm text-slate-600">{stand.products}</p>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="text-sm text-white/80">{stand.products}</p>
+          <p className="mt-2 text-sm text-white/75">
             Responsable: {stand.responsible} · {formatCOP(Number(stand.amount))}
           </p>
-        </Panel>
+        </section>
       )}
 
-      <Panel title="Pagos registrados">
+      <section className="rounded-3xl bg-scout-600 p-5 text-white">
+        <h3 className={`mb-3 ${cardTitleClass}`}>Pagos registrados</h3>
         {paymentRows.length === 0 ? (
-          <EmptyState icon="💳" title="Sin pagos registrados" />
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Concepto</th>
-                  <th>Referencia</th>
-                  <th className="text-right">Valor</th>
-                  <th>Fecha</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paymentRows.map((payment) => (
-                  <tr key={payment.id}>
-                    <td>{payment.concept}</td>
-                    <td className="font-mono text-xs">{payment.reference}</td>
-                    <td className="whitespace-nowrap text-right">
-                      {formatCOP(Number(payment.reported_amount))}
-                    </td>
-                    <td className="whitespace-nowrap text-xs">
-                      {formatDate(payment.payment_date)}
-                    </td>
-                    <td>
-                      <StatusBadge
-                        status={registrationStatusView(
-                          payment.status === 'approved' ? 'confirmed' : 'payment_pending',
-                        )}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="rounded-2xl border border-dashed border-white/30 px-4 py-8 text-center">
+            <span className="mb-2 block text-3xl" aria-hidden>
+              💳
+            </span>
+            <p className="font-semibold text-white">Sin pagos registrados</p>
           </div>
+        ) : (
+          <ul className="space-y-2.5">
+            {paymentRows.map((payment) => (
+              <li
+                key={payment.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/20 bg-white/10 p-3"
+              >
+                <div className="min-w-0">
+                  <b className="block truncate text-white">{payment.concept}</b>
+                  <p className="font-mono text-xs text-white/60">{payment.reference}</p>
+                  <p className="text-xs text-white/70">{formatDate(payment.payment_date)}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-amber-300">
+                    {formatCOP(Number(payment.reported_amount))}
+                  </span>
+                  <StatusBadge
+                    status={registrationStatusView(
+                      payment.status === 'approved' ? 'confirmed' : 'payment_pending',
+                    )}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
-      </Panel>
+      </section>
 
-      <p className="mt-6 text-center text-xs text-slate-400">
+      <p className="text-center text-xs text-white/50">
         {settings.event_name} · Generado el {formatDate(new Date().toISOString().slice(0, 10))}
       </p>
-    </>
+    </div>
   );
 }

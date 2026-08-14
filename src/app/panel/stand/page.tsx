@@ -5,7 +5,8 @@ import { formatCOP } from '@/lib/domain/fees';
 import { isEditableRegistration } from '@/lib/domain/fees';
 import { remainingStandSlots } from '@/lib/domain/eligibility';
 import { registrationStatusView } from '@/lib/domain/status';
-import { Alert, Badge, LinkButton, PageHeader, Panel, StatusBadge } from '@/components/ui';
+import { Alert, Badge, LinkButton, StatusBadge } from '@/components/ui';
+import { cardTitleClass } from '@/lib/fonts';
 import { StandForm } from './stand-form';
 
 export const metadata: Metadata = { title: 'Mi stand' };
@@ -28,23 +29,26 @@ export default async function GroupStandPage() {
   const editable = !stand || isEditableRegistration(stand.status);
 
   return (
-    <>
-      <PageHeader
-        title="Mi stand de ventas"
-        description={`Valor: ${formatCOP(settings.stand_fee)} · Cupos disponibles: ${available} de ${settings.stand_limit}`}
-      />
+    <div className="min-w-0 space-y-5">
+      <section className="rounded-3xl bg-plum px-6 py-5 text-white sm:px-8 sm:py-6">
+        <h1 className={cardTitleClass}>Mi stand de ventas</h1>
+        <p className="mt-1 text-sm text-white/75">
+          Valor: {formatCOP(settings.stand_fee)} · Cupos disponibles: {available} de{' '}
+          {settings.stand_limit}
+        </p>
+      </section>
 
       {stand && (
-        <Panel className="mb-6">
+        <section className="rounded-3xl bg-scout-600 p-5 text-white">
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="text-lg font-bold text-navy">{stand.name}</h3>
-              <p className="text-sm text-slate-500">Responsable: {stand.responsible}</p>
+              <h3 className={cardTitleClass}>{stand.name}</h3>
+              <p className="text-sm text-white/75">Responsable: {stand.responsible}</p>
             </div>
             <StatusBadge status={registrationStatusView(stand.status)} />
           </div>
 
-          <p className="mb-3 text-sm text-slate-600">{stand.products}</p>
+          <p className="mb-3 text-sm text-white/80">{stand.products}</p>
 
           <div className="flex flex-wrap gap-1.5">
             {stand.needs_power && <Badge tone="blue">⚡ Requiere energía</Badge>}
@@ -66,40 +70,43 @@ export default async function GroupStandPage() {
               </LinkButton>
             </Alert>
           )}
-        </Panel>
+        </section>
       )}
 
       {available === 0 && !iOccupy && !stand && (
-        <Alert tone="warning" className="mb-6">
+        <Alert tone="warning">
           No quedan cupos disponibles para stands. Si se libera alguno podrás solicitarlo desde
           aquí.
         </Alert>
       )}
 
       {editable && (available > 0 || iOccupy || Boolean(stand)) && (
-        <Panel
-          title={stand ? 'Editar solicitud' : 'Solicitar stand'}
-          description="Un grupo puede tener un solo stand. Si editas, se actualiza el existente."
-        >
-          <StandForm
-            stand={
-              stand
-                ? {
-                    name: stand.name,
-                    responsible: stand.responsible,
-                    document: stand.document,
-                    phone: stand.phone,
-                    email: stand.email ?? '',
-                    products: stand.products,
-                    description: stand.description,
-                    needsPower: stand.needs_power,
-                    needsFurniture: stand.needs_furniture,
-                    notes: stand.notes,
-                  }
-                : undefined
-            }
-          />
-        </Panel>
+        <section className="rounded-3xl bg-plum p-5 text-white">
+          <h3 className={cardTitleClass}>{stand ? 'Editar solicitud' : 'Solicitar stand'}</h3>
+          <p className="mb-3 text-sm text-white/75">
+            Un grupo puede tener un solo stand. Si editas, se actualiza el existente.
+          </p>
+          <div className="rounded-2xl bg-jade p-4">
+            <StandForm
+              stand={
+                stand
+                  ? {
+                      name: stand.name,
+                      responsible: stand.responsible,
+                      document: stand.document,
+                      phone: stand.phone,
+                      email: stand.email ?? '',
+                      products: stand.products,
+                      description: stand.description,
+                      needsPower: stand.needs_power,
+                      needsFurniture: stand.needs_furniture,
+                      notes: stand.notes,
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </section>
       )}
 
       {stand && !editable && (
@@ -108,6 +115,6 @@ export default async function GroupStandPage() {
           modificar algo, escribe a la organización.
         </Alert>
       )}
-    </>
+    </div>
   );
 }

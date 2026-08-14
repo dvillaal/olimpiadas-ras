@@ -57,19 +57,19 @@ export function ProposeForm({
       {state.errors?._ && <Alert tone="error">{state.errors._}</Alert>}
       {state.errors?.participantIds && <Alert tone="error">{state.errors.participantIds}</Alert>}
 
-      <p className="text-sm font-semibold text-navy">
+      <p className="text-sm font-semibold text-white">
         Escoge hasta {maxSlots} participante(s) ({selected.length} seleccionado
         {selected.length === 1 ? '' : 's'})
       </p>
 
-      <ul className="max-h-48 space-y-1 overflow-y-auto rounded-xl border border-line p-2">
+      <ul className="scrollbar-dark max-h-48 space-y-1 overflow-y-auto rounded-xl border border-white/20 p-2">
         {participants.map((participant) => {
           const checked = selected.includes(participant.id);
           return (
             <li key={participant.id}>
               <label
                 className={`flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm ${
-                  checked ? 'bg-scout-50' : 'hover:bg-canvas'
+                  checked ? 'bg-white/15' : 'hover:bg-white/5'
                 }`}
               >
                 <input
@@ -77,9 +77,9 @@ export function ProposeForm({
                   checked={checked}
                   onChange={() => toggle(participant.id)}
                   disabled={!checked && selected.length >= maxSlots}
-                  className="size-4 accent-scout-600"
+                  className="size-4 accent-white"
                 />
-                <span className="min-w-0 flex-1 truncate">{participant.fullName}</span>
+                <span className="min-w-0 flex-1 truncate text-white">{participant.fullName}</span>
               </label>
             </li>
           );
@@ -89,7 +89,9 @@ export function ProposeForm({
       <textarea
         name="note"
         rows={2}
-        className="field-input resize-y text-sm"
+        className="w-full resize-y rounded-xl border border-white/30 bg-white/10 px-3.5 py-2.5
+                   text-sm text-white placeholder:text-white/50 transition-colors
+                   focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/20"
         placeholder="Mensaje para el grupo solicitante (opcional)"
       />
 

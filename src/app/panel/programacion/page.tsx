@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { requireGroup } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
-import { EmptyState, LinkButton, PageHeader, Panel, StatCard } from '@/components/ui';
+import { LinkButton } from '@/components/ui';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
 import { CompetitionCard } from '@/components/competition-card';
 import { loadCompetitions } from '@/lib/competitions/load';
+import { cardTitleClass } from '@/lib/fonts';
 
 export const metadata: Metadata = { title: 'Mi programación' };
 
@@ -18,60 +19,99 @@ export default async function GroupSchedulePage() {
   const upcoming = competitions.filter((c) => new Date(`${c.startsOn}T${c.startsAt}`) >= now);
   const past = competitions.filter((c) => new Date(`${c.startsOn}T${c.startsAt}`) < now);
 
-  return (
-    <>
-      <PageHeader
-        title="Mi programación"
-        description="Partidos y sesiones en los que participa tu grupo."
-        actions={
-          <LinkButton href="/resultados" variant="secondary" target="_blank">
-            🏁 Resultados generales
-          </LinkButton>
-        }
-      />
+  const stats = [
+    { icon: '🗓️', value: competitions.length, label: 'Competencias' },
+    { icon: '⏭️', value: upcoming.length, label: 'Por disputar' },
+    {
+      icon: '🏁',
+      value: competitions.filter((c) => c.resultPublished).length,
+      label: 'Con resultado publicado',
+    },
+  ];
 
+  return (
+    <div className="min-w-0 space-y-5">
       <RealtimeRefresher tables={['schedules']} groupId={context.group.id} />
 
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-plum px-6 py-5 text-white sm:px-8 sm:py-6">
+        <div>
+          <h1 className={cardTitleClass}>Mi programación</h1>
+          <p className="mt-1 text-sm text-white/75">
+            Partidos y sesiones en los que participa tu grupo.
+          </p>
+        </div>
+        <LinkButton
+          href="/resultados"
+          variant="secondary"
+          target="_blank"
+          className="!border-white/40 !bg-white/10 !text-white hover:!bg-white/20"
+        >
+          🏁 Resultados generales
+        </LinkButton>
+      </section>
+
       {competitions.length === 0 ? (
-        <EmptyState
-          icon="🗓️"
-          title="Todavía no tienes competencias programadas"
-          description="Aparecerán aquí cuando la organización publique el calendario de los deportes en los que estás inscrito."
-        />
+        <section className="rounded-3xl bg-scout-600 p-6 text-center text-white">
+          <span className="mb-2 block text-3xl" aria-hidden>
+            🗓️
+          </span>
+          <p className="font-semibold text-white">
+            Todavía no tienes competencias programadas
+          </p>
+          <p className="mt-1 text-sm text-white/75">
+            Aparecerán aquí cuando la organización publique el calendario de los deportes en los
+            que estás inscrito.
+          </p>
+        </section>
       ) : (
         <>
-          <div className="mb-6 grid gap-4 sm:grid-cols-3">
-            <StatCard icon="🗓️" value={competitions.length} label="Competencias" />
-            <StatCard icon="⏭️" value={upcoming.length} label="Por disputar" />
-            <StatCard
-              icon="🏁"
-              value={competitions.filter((c) => c.resultPublished).length}
-              label="Con resultado publicado"
-              tone="success"
-            />
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+            {stats.map((stat) => (
+              <div key={stat.label} className="rounded-2xl bg-lilac px-3.5 py-3 text-white">
+                <p className="text-xl font-black sm:text-2xl">
+                  <span aria-hidden className="mr-1">
+                    {stat.icon}
+                  </span>
+                  {stat.value}
+                </p>
+                <p className="text-xs font-semibold text-amber-300">{stat.label}</p>
+              </div>
+            ))}
           </div>
 
           {upcoming.length > 0 && (
-            <Panel title="Próximas" className="mb-5">
+            <section className="rounded-3xl bg-scout-600 p-5 text-white">
+              <h3 className={`mb-3 ${cardTitleClass}`}>Próximas</h3>
               <div className="space-y-4">
                 {upcoming.map((competition) => (
-                  <CompetitionCard key={competition.id} competition={competition} showReferee />
+                  <CompetitionCard
+                    key={competition.id}
+                    competition={competition}
+                    showReferee
+                    tone="dark"
+                  />
                 ))}
               </div>
-            </Panel>
+            </section>
           )}
 
           {past.length > 0 && (
-            <Panel title="Ya disputadas">
+            <section className="rounded-3xl bg-plum p-5 text-white">
+              <h3 className={`mb-3 ${cardTitleClass}`}>Ya disputadas</h3>
               <div className="space-y-4">
                 {past.map((competition) => (
-                  <CompetitionCard key={competition.id} competition={competition} showReferee />
+                  <CompetitionCard
+                    key={competition.id}
+                    competition={competition}
+                    showReferee
+                    tone="dark"
+                  />
                 ))}
               </div>
-            </Panel>
+            </section>
           )}
         </>
       )}
-    </>
+    </div>
   );
 }

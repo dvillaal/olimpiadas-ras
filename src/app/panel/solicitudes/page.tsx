@@ -3,8 +3,9 @@ import { requireGroup } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { intergroupStatusView } from '@/lib/domain/status';
 import { formatRelative } from '@/lib/utils';
-import { Alert, Badge, EmptyState, PageHeader, Panel, StatusBadge } from '@/components/ui';
+import { Alert, Badge, StatusBadge } from '@/components/ui';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
+import { cardTitleClass } from '@/lib/fonts';
 import { NewRequestForm } from './new-request-form';
 import { ProposeForm } from './propose-form';
 import { ResolveButtons } from './resolve-buttons';
@@ -74,34 +75,49 @@ export default async function GroupIntergroupPage() {
     .map((p) => ({ id: p.id, fullName: p.full_name, branch: p.branch_id }));
 
   return (
-    <>
+    <div className="min-w-0 space-y-5">
       <RealtimeRefresher groupId={group.id} tables={['intergroup_requests', 'teams']} announce={false} />
 
-      <PageHeader
-        title="Solicitudes intergrupales"
-        description="Cuando te falten participantes para completar un equipo, pide apoyo a otro grupo scout."
-      />
+      <section className="rounded-3xl bg-plum px-6 py-5 text-white sm:px-8 sm:py-6">
+        <h1 className={cardTitleClass}>Solicitudes intergrupales</h1>
+        <p className="mt-1 text-sm text-white/75">
+          Cuando te falten participantes para completar un equipo, pide apoyo a otro grupo scout.
+        </p>
+      </section>
 
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="space-y-5">
-          <Panel
-            title="Pedir apoyo"
-            description="Solo aparecen los equipos incompletos que admiten integrantes externos."
-          >
-            {incompleteTeams.length === 0 ? (
-              <EmptyState
-                icon="✅"
-                title="No necesitas apoyo"
-                description="Todos tus equipos están completos o no admiten integrantes de otros grupos."
-              />
-            ) : (
-              <NewRequestForm teams={incompleteTeams} groups={otherGroups} />
-            )}
-          </Panel>
+          <section className="rounded-3xl bg-scout-600 p-5 text-white">
+            <h3 className={cardTitleClass}>Pedir apoyo</h3>
+            <p className="mb-3 text-sm text-white/75">
+              Solo aparecen los equipos incompletos que admiten integrantes externos.
+            </p>
+            <div className="rounded-2xl bg-jade p-4">
+              {incompleteTeams.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-white/30 px-4 py-8 text-center">
+                  <span className="mb-2 block text-3xl" aria-hidden>
+                    ✅
+                  </span>
+                  <p className="font-semibold text-white">No necesitas apoyo</p>
+                  <p className="mt-1 text-sm text-white/75">
+                    Todos tus equipos están completos o no admiten integrantes de otros grupos.
+                  </p>
+                </div>
+              ) : (
+                <NewRequestForm teams={incompleteTeams} groups={otherGroups} />
+              )}
+            </div>
+          </section>
 
-          <Panel title={`Solicitudes enviadas (${sent.length})`}>
+          <section className="rounded-3xl bg-plum p-5 text-white">
+            <h3 className={`mb-3 ${cardTitleClass}`}>Solicitudes enviadas ({sent.length})</h3>
             {sent.length === 0 ? (
-              <EmptyState icon="📤" title="Todavía no has pedido apoyo" />
+              <div className="rounded-2xl border border-dashed border-white/25 px-4 py-8 text-center">
+                <span className="mb-2 block text-3xl" aria-hidden>
+                  📤
+                </span>
+                <p className="font-semibold text-white">Todavía no has pedido apoyo</p>
+              </div>
             ) : (
               <ul className="space-y-3">
                 {sent.map((request) => {
@@ -109,11 +125,11 @@ export default async function GroupIntergroupPage() {
                   const proposed = (proposals ?? []).filter((p) => p.request_id === request.id);
 
                   return (
-                    <li key={request.id} className="rounded-2xl border border-line p-4">
+                    <li key={request.id} className="rounded-2xl border border-white/20 bg-white/10 p-4">
                       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                         <div>
-                          <b className="text-navy">{groupById.get(request.target_group_id)?.name}</b>
-                          <p className="text-sm text-slate-500">
+                          <b className="text-white">{groupById.get(request.target_group_id)?.name}</b>
+                          <p className="text-sm text-white/75">
                             {team?.name} · {request.slots_requested} cupo(s) ·{' '}
                             {formatRelative(request.created_at)}
                           </p>
@@ -122,12 +138,12 @@ export default async function GroupIntergroupPage() {
                       </div>
 
                       {request.message && (
-                        <p className="mb-2 text-sm text-slate-600">{request.message}</p>
+                        <p className="mb-2 text-sm text-white/80">{request.message}</p>
                       )}
 
                       {request.status === 'proposed' && (
                         <>
-                          <p className="mb-2 text-sm font-semibold text-navy">
+                          <p className="mb-2 text-sm font-semibold text-white">
                             Participantes propuestos:
                           </p>
                           <ul className="mb-3 flex flex-wrap gap-1.5">
@@ -140,7 +156,7 @@ export default async function GroupIntergroupPage() {
                             ))}
                           </ul>
                           {request.response_note && (
-                            <p className="mb-3 rounded-lg bg-canvas p-2 text-sm text-slate-600">
+                            <p className="mb-3 rounded-lg bg-white/10 p-2 text-sm text-white/80">
                               {request.response_note}
                             </p>
                           )}
@@ -149,7 +165,7 @@ export default async function GroupIntergroupPage() {
                       )}
 
                       {request.status === 'pending' && (
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-white/70">
                           Esperando que el otro grupo proponga participantes.
                         </p>
                       )}
@@ -158,16 +174,21 @@ export default async function GroupIntergroupPage() {
                 })}
               </ul>
             )}
-          </Panel>
+          </section>
         </div>
 
-        <Panel title={`Solicitudes recibidas (${received.length})`}>
+        <section className="rounded-3xl bg-scout-600 p-5 text-white">
+          <h3 className={`mb-3 ${cardTitleClass}`}>Solicitudes recibidas ({received.length})</h3>
           {received.length === 0 ? (
-            <EmptyState
-              icon="📥"
-              title="Ningún grupo te ha pedido apoyo"
-              description="Cuando otro grupo necesite participantes, aparecerá aquí."
-            />
+            <div className="rounded-2xl border border-dashed border-white/30 px-4 py-8 text-center">
+              <span className="mb-2 block text-3xl" aria-hidden>
+                📥
+              </span>
+              <p className="font-semibold text-white">Ningún grupo te ha pedido apoyo</p>
+              <p className="mt-1 text-sm text-white/75">
+                Cuando otro grupo necesite participantes, aparecerá aquí.
+              </p>
+            </div>
           ) : (
             <ul className="space-y-3">
               {received.map((request) => {
@@ -178,13 +199,13 @@ export default async function GroupIntergroupPage() {
                   .map((p) => p.participant_id);
 
                 return (
-                  <li key={request.id} className="rounded-2xl border border-line p-4">
+                  <li key={request.id} className="rounded-2xl border border-white/20 bg-white/10 p-4">
                     <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                       <div>
-                        <b className="text-navy">
+                        <b className="text-white">
                           {groupById.get(request.requester_group_id)?.name}
                         </b>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-white/75">
                           {sport?.icon} {sport?.name} · necesita {request.slots_requested}{' '}
                           participante(s)
                         </p>
@@ -193,21 +214,23 @@ export default async function GroupIntergroupPage() {
                     </div>
 
                     {request.message && (
-                      <p className="mb-3 rounded-lg bg-canvas p-2 text-sm text-slate-600">
+                      <p className="mb-3 rounded-lg bg-white/10 p-2 text-sm text-white/80">
                         {request.message}
                       </p>
                     )}
 
                     {request.status === 'pending' || request.status === 'proposed' ? (
-                      <ProposeForm
-                        requestId={request.id}
-                        maxSlots={request.slots_requested}
-                        participants={myParticipants}
-                        selectedIds={proposed}
-                        alreadyProposed={request.status === 'proposed'}
-                      />
+                      <div className="rounded-2xl bg-jade p-4">
+                        <ProposeForm
+                          requestId={request.id}
+                          maxSlots={request.slots_requested}
+                          participants={myParticipants}
+                          selectedIds={proposed}
+                          alreadyProposed={request.status === 'proposed'}
+                        />
+                      </div>
                     ) : (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-white/70">
                         {request.status === 'accepted'
                           ? 'Tus participantes fueron integrados al equipo solicitante.'
                           : 'Esta solicitud ya se cerró.'}
@@ -218,13 +241,13 @@ export default async function GroupIntergroupPage() {
               })}
             </ul>
           )}
-        </Panel>
+        </section>
       </div>
 
-      <Alert tone="info" className="mt-5">
+      <Alert tone="info">
         Una persona prestada sigue perteneciendo a su grupo de origen y cuenta dentro de su límite
         de deportes. El equipo que la recibe es el responsable del pago de esa inscripción.
       </Alert>
-    </>
+    </div>
   );
 }

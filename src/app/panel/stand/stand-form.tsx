@@ -39,59 +39,93 @@ export function StandForm({ stand }: { stand?: StandDraft }) {
   }, [state.ok, state.message]);
 
   const errors = state.errors ?? {};
+  const inputClass =
+    'w-full rounded-xl border border-white/30 bg-white/10 px-3.5 py-2.5 text-[15px] text-white ' +
+    'transition-colors placeholder:text-white/50 focus:border-white/60 focus:outline-none ' +
+    'focus:ring-2 focus:ring-white/20';
+  const fieldLabelClass = '[&_.field-label]:text-white';
+  const fieldHintClass = '[&_p]:text-white/60';
 
   return (
     <form action={formAction} className="space-y-4" noValidate>
       {errors._ && <Alert tone="error">{errors._}</Alert>}
 
-      <Field label="Nombre del stand" htmlFor="standName" error={errors.name} required>
+      <Field
+        label="Nombre del stand"
+        htmlFor="standName"
+        error={errors.name}
+        required
+        className={fieldLabelClass}
+      >
         <input
           id="standName"
           name="name"
           required
-          className="field-input"
+          className={inputClass}
           defaultValue={stand?.name}
           placeholder="Delicias Scout"
         />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Responsable" htmlFor="responsible" error={errors.responsible} required>
+        <Field
+          label="Responsable"
+          htmlFor="responsible"
+          error={errors.responsible}
+          required
+          className={fieldLabelClass}
+        >
           <input
             id="responsible"
             name="responsible"
             required
-            className="field-input"
+            className={inputClass}
             defaultValue={stand?.responsible}
           />
         </Field>
-        <Field label="Documento" htmlFor="standDocument" error={errors.document}>
+        <Field
+          label="Documento"
+          htmlFor="standDocument"
+          error={errors.document}
+          className={fieldLabelClass}
+        >
           <input
             id="standDocument"
             name="document"
-            className="field-input"
+            className={inputClass}
             defaultValue={stand?.document}
           />
         </Field>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Teléfono" htmlFor="standPhone" error={errors.phone} required>
+        <Field
+          label="Teléfono"
+          htmlFor="standPhone"
+          error={errors.phone}
+          required
+          className={fieldLabelClass}
+        >
           <input
             id="standPhone"
             name="phone"
             required
-            className="field-input"
+            className={inputClass}
             inputMode="tel"
             defaultValue={stand?.phone}
           />
         </Field>
-        <Field label="Correo" htmlFor="standEmail" error={errors.email}>
+        <Field
+          label="Correo"
+          htmlFor="standEmail"
+          error={errors.email}
+          className={fieldLabelClass}
+        >
           <input
             id="standEmail"
             name="email"
             type="email"
-            className="field-input"
+            className={inputClass}
             defaultValue={stand?.email}
           />
         </Field>
@@ -103,56 +137,69 @@ export function StandForm({ stand }: { stand?: StandDraft }) {
         error={errors.products}
         hint="Sé específico: ayuda a la organización a distribuir los stands sin repetir oferta."
         required
+        className={`${fieldLabelClass} ${fieldHintClass}`}
       >
         <textarea
           id="products"
           name="products"
           rows={3}
           required
-          className="field-input resize-y"
+          className={`${inputClass} resize-y`}
           defaultValue={stand?.products}
           placeholder="Empanadas, jugos naturales, artesanías hechas por la tropa…"
         />
       </Field>
 
-      <Field label="Descripción del stand" htmlFor="standDescription" error={errors.description}>
+      <Field
+        label="Descripción del stand"
+        htmlFor="standDescription"
+        error={errors.description}
+        className={fieldLabelClass}
+      >
         <textarea
           id="standDescription"
           name="description"
           rows={2}
-          className="field-input resize-y"
+          className={`${inputClass} resize-y`}
           defaultValue={stand?.description}
         />
       </Field>
 
-      <fieldset className="space-y-2 rounded-xl bg-canvas p-4">
-        <legend className="kicker mb-1">Requerimientos</legend>
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-navy">
+      <fieldset className="space-y-2 rounded-xl border border-white/20 bg-white/10 p-4">
+        <legend className="mb-1 text-[11px] font-black uppercase tracking-[0.12em] text-white/70">
+          Requerimientos
+        </legend>
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-white">
           <input
             type="checkbox"
             name="needsPower"
             defaultChecked={stand?.needsPower}
-            className="size-4 accent-scout-600"
+            className="size-4 accent-white"
           />
           ⚡ Necesitamos toma de energía
         </label>
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-navy">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-white">
           <input
             type="checkbox"
             name="needsFurniture"
             defaultChecked={stand?.needsFurniture}
-            className="size-4 accent-scout-600"
+            className="size-4 accent-white"
           />
           🪑 Necesitamos mesas y sillas
         </label>
       </fieldset>
 
-      <Field label="Observaciones" htmlFor="standNotes" error={errors.notes}>
+      <Field
+        label="Observaciones"
+        htmlFor="standNotes"
+        error={errors.notes}
+        className={fieldLabelClass}
+      >
         <textarea
           id="standNotes"
           name="notes"
           rows={2}
-          className="field-input resize-y"
+          className={`${inputClass} resize-y`}
           defaultValue={stand?.notes}
         />
       </Field>

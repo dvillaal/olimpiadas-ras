@@ -4,17 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { formatCOP, sportFee } from '@/lib/domain/fees';
 import { registrationStatusView } from '@/lib/domain/status';
 import { isEditableRegistration } from '@/lib/domain/fees';
-import {
-  Alert,
-  Badge,
-  Button,
-  EmptyState,
-  LinkButton,
-  PageHeader,
-  Panel,
-  StatusBadge,
-} from '@/components/ui';
+import { Alert, Badge, Button, LinkButton, StatusBadge } from '@/components/ui';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
+import { cardTitleClass } from '@/lib/fonts';
 import { deleteTeamAction } from '../actions';
 
 export const metadata: Metadata = { title: 'Mis equipos' };
@@ -48,29 +40,47 @@ export default async function GroupTeamsPage() {
   const rows = teams ?? [];
 
   return (
-    <>
+    <div className="min-w-0 space-y-5">
       <RealtimeRefresher groupId={group.id} tables={['teams', 'intergroup_requests']} announce={false} />
 
-      <PageHeader
-        title="Mis equipos"
-        description="Revisa las alineaciones y completa las que estén incompletas."
-        actions={
-          <LinkButton href="/panel/deportes" variant="secondary" size="sm">
-            + Crear equipo
-          </LinkButton>
-        }
-      />
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-plum px-6 py-5 text-white sm:px-8 sm:py-6">
+        <div>
+          <h1 className={cardTitleClass}>Mis equipos</h1>
+          <p className="mt-1 text-sm text-white/75">
+            Revisa las alineaciones y completa las que estén incompletas.
+          </p>
+        </div>
+        <LinkButton
+          href="/panel/deportes"
+          variant="secondary"
+          size="sm"
+          className="!border-white/40 !bg-white/10 !text-white hover:!bg-white/20"
+        >
+          + Crear equipo
+        </LinkButton>
+      </section>
 
       {rows.length === 0 ? (
-        <EmptyState
-          icon="🤝"
-          title="Todavía no tienes equipos"
-          description="Ve a Deportes, escoge una disciplina por equipos y arma tu alineación."
-          action={<LinkButton href="/panel/deportes">Ver deportes</LinkButton>}
-        />
+        <section className="rounded-3xl bg-scout-600 p-6 text-center text-white">
+          <span className="mb-2 block text-3xl" aria-hidden>
+            🤝
+          </span>
+          <p className="font-semibold text-white">Todavía no tienes equipos</p>
+          <p className="mt-1 text-sm text-white/75">
+            Ve a Deportes, escoge una disciplina por equipos y arma tu alineación.
+          </p>
+          <LinkButton
+            href="/panel/deportes"
+            size="sm"
+            className="mt-3 !border-white/40 !bg-white/10 !text-white hover:!bg-white/20"
+            variant="ghost"
+          >
+            Ver deportes
+          </LinkButton>
+        </section>
       ) : (
         <ul className="grid gap-5 xl:grid-cols-2">
-          {rows.map((team) => {
+          {rows.map((team, index) => {
             const sport = sportById.get(team.sport_id);
             const roster = membersByTeam.get(team.id) ?? [];
             const starters = roster.filter((m) => m.role === 'starter');
@@ -94,13 +104,15 @@ export default async function GroupTeamsPage() {
               (r) => r.team_id === team.id && r.status === 'admin_rejected',
             );
 
+            const frame = index % 2 === 0 ? 'bg-plum' : 'bg-scout-600';
+
             return (
               <li key={team.id}>
-                <Panel>
+                <section className={`rounded-3xl ${frame} p-6 text-white`}>
                   <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <h3 className="font-bold text-navy">{team.name}</h3>
-                      <p className="text-sm text-slate-500">
+                      <h3 className={cardTitleClass}>{team.name}</h3>
+                      <p className="text-sm text-white/75">
                         {sport?.icon} {sport?.name} ·{' '}
                         {sport ? formatCOP(sportFee(sport, settings)) : '—'}
                       </p>
@@ -150,7 +162,7 @@ export default async function GroupTeamsPage() {
                   )}
 
                   <div className="mb-3">
-                    <p className="mb-1.5 text-sm font-semibold text-navy">
+                    <p className="mb-1.5 text-sm font-semibold text-white">
                       Titulares ({starters.length}/{sport?.team_size ?? '?'})
                     </p>
                     <ul className="flex flex-wrap gap-1.5">
@@ -168,14 +180,14 @@ export default async function GroupTeamsPage() {
                         );
                       })}
                       {starters.length === 0 && (
-                        <li className="text-sm text-slate-500">Sin titulares.</li>
+                        <li className="text-sm text-white/70">Sin titulares.</li>
                       )}
                     </ul>
                   </div>
 
                   {substitutes.length > 0 && (
                     <div className="mb-3">
-                      <p className="mb-1.5 text-sm font-semibold text-navy">Suplentes</p>
+                      <p className="mb-1.5 text-sm font-semibold text-white">Suplentes</p>
                       <ul className="flex flex-wrap gap-1.5">
                         {substitutes.map((member) => (
                           <li key={member.participant_id}>
@@ -191,26 +203,31 @@ export default async function GroupTeamsPage() {
                   {editable ? (
                     <form action={deleteTeamAction}>
                       <input type="hidden" name="id" value={team.id} />
-                      <Button type="submit" size="sm" variant="ghost">
+                      <Button
+                        type="submit"
+                        size="sm"
+                        variant="ghost"
+                        className="!border-white/40 !text-white hover:!bg-white/10"
+                      >
                         Eliminar equipo
                       </Button>
                     </form>
                   ) : (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-white/70">
                       Este equipo ya no admite cambios porque su pago está en curso.
                     </p>
                   )}
-                </Panel>
+                </section>
               </li>
             );
           })}
         </ul>
       )}
 
-      <p className="mt-5 text-sm text-slate-500">
+      <p className="text-sm text-white/60">
         <Badge tone="blue">↗</Badge> señala a los integrantes prestados por otro grupo ·{' '}
         <span aria-hidden>⭐</span> marca al capitán.
       </p>
-    </>
+    </div>
   );
 }

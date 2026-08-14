@@ -176,4 +176,17 @@
   body {
     background: #fff;
   }
+
+  /*
+   * La hoja de resumen usa el mismo bloque de color del panel (plum/scout-600)
+   * en pantalla, pero al imprimir todo debe quedar en blanco y negro para no
+   * gastar tinta ni perder legibilidad en papel.
+   */
+  .print-surface,
+  .print-surface * {
+    background: #fff !important;
+    color: #1f2937 !important;
+    border-color: #dbe5df !important;
+    box-shadow: none !important;
+  }
 }

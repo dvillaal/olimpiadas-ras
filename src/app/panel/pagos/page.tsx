@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { formatCOP, requiresPayment, sportFee } from '@/lib/domain/fees';
 import { paymentStatusView } from '@/lib/domain/status';
 import { formatDate, formatRelative } from '@/lib/utils';
-import { Alert, EmptyState, PageHeader, Panel, StatCard, StatusBadge } from '@/components/ui';
+import { Alert, StatusBadge } from '@/components/ui';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
+import { cardTitleClass } from '@/lib/fonts';
 import { PaymentForm } from './payment-form';
 import { ProofLink } from './proof-link';
 import type { PayableType } from '@/types/database';
@@ -122,52 +123,61 @@ export default async function GroupPaymentsPage() {
   );
   const totalPending = pending.reduce((sum, concept) => sum + concept.amount, 0);
 
+  const stats = [
+    { icon: '✅', value: formatCOP(paid), label: 'Pagado y aprobado' },
+    { icon: '⏳', value: String(inReview), label: 'En revisión' },
+    { icon: '📌', value: formatCOP(totalPending), label: 'Pendiente por pagar' },
+    { icon: '↩️', value: String(needsAction.length), label: 'Requieren corrección' },
+  ];
+
   return (
-    <>
+    <div className="min-w-0 space-y-5">
       <RealtimeRefresher groupId={group.id} tables={['payments']} announce={false} />
 
-      <PageHeader
-        title="Pagos"
-        description="Consigna a la cuenta del evento y registra aquí el comprobante. La organización lo verificará."
-      />
-
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon="✅" value={formatCOP(paid)} label="Pagado y aprobado" tone="success" />
-        <StatCard icon="⏳" value={inReview} label="En revisión" />
-        <StatCard
-          icon="📌"
-          value={formatCOP(totalPending)}
-          label="Pendiente por pagar"
-          tone={totalPending > 0 ? 'warning' : 'default'}
-        />
-        <StatCard
-          icon="↩️"
-          value={needsAction.length}
-          label="Requieren corrección"
-          tone={needsAction.length > 0 ? 'danger' : 'default'}
-        />
-      </div>
-
-      <Panel title="Cuenta para consignar" className="mb-6">
-        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            ['Entidad', settings.bank_name],
-            ['Tipo de cuenta', settings.bank_account_type],
-            ['Número de cuenta', settings.bank_account_number],
-            ['NIT', settings.bank_nit],
-            ['Titular', settings.bank_holder],
-            ['Nombre de la cuenta', settings.bank_label],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-xl bg-canvas p-3">
-              <dt className="text-xs uppercase tracking-wide text-slate-500">{label}</dt>
-              <dd className="mt-0.5 font-bold text-navy">{value}</dd>
+      <section className="rounded-3xl bg-plum px-6 py-5 text-white sm:px-8 sm:py-6">
+        <h1 className={cardTitleClass}>Pagos</h1>
+        <p className="mt-1 text-sm text-white/75">
+          Consigna a la cuenta del evento y registra aquí el comprobante. La organización lo
+          verificará.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className="rounded-xl bg-lilac px-3.5 py-3">
+              <p className="text-xl font-black text-white sm:text-2xl">
+                <span aria-hidden className="mr-1">
+                  {stat.icon}
+                </span>
+                {stat.value}
+              </p>
+              <p className="text-xs font-semibold text-amber-300">{stat.label}</p>
             </div>
           ))}
-        </dl>
-      </Panel>
+        </div>
+      </section>
+
+      <section className="rounded-3xl bg-scout-600 p-5 text-white">
+        <h3 className={`mb-3 ${cardTitleClass}`}>Cuenta para consignar</h3>
+        <div className="rounded-2xl bg-jade p-4">
+          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ['Entidad', settings.bank_name],
+              ['Tipo de cuenta', settings.bank_account_type],
+              ['Número de cuenta', settings.bank_account_number],
+              ['NIT', settings.bank_nit],
+              ['Titular', settings.bank_holder],
+              ['Nombre de la cuenta', settings.bank_label],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs uppercase tracking-wide text-white/70">{label}</dt>
+                <dd className="mt-0.5 font-bold text-white">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
 
       {needsAction.length > 0 && (
-        <Alert tone="warning" title="Pagos devueltos" className="mb-6">
+        <Alert tone="warning" title="Pagos devueltos">
           {needsAction.map((payment) => (
             <p key={payment.id} className="mt-1">
               <b>{payment.concept}</b> · {payment.admin_note}
@@ -177,27 +187,30 @@ export default async function GroupPaymentsPage() {
         </Alert>
       )}
 
-      <Panel
-        title={`Conceptos por pagar (${pending.length})`}
-        description="Registra un pago por cada concepto."
-        className="mb-6"
-      >
+      <section className="rounded-3xl bg-plum p-5 text-white">
+        <h3 className={cardTitleClass}>Conceptos por pagar ({pending.length})</h3>
+        <p className="mb-3 text-sm text-white/75">Registra un pago por cada concepto.</p>
+
         {pending.length === 0 ? (
-          <EmptyState
-            icon="✅"
-            title="No tienes conceptos pendientes"
-            description="Todo lo que has inscrito está pagado o no tiene costo."
-          />
+          <div className="rounded-2xl border border-dashed border-white/25 px-4 py-8 text-center">
+            <span className="mb-2 block text-3xl" aria-hidden>
+              ✅
+            </span>
+            <p className="font-semibold text-white">No tienes conceptos pendientes</p>
+            <p className="mt-1 text-sm text-white/75">
+              Todo lo que has inscrito está pagado o no tiene costo.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-4">
             {pending.map((concept) => (
               <li
                 key={`${concept.payableType}:${concept.payableId}`}
-                className="rounded-2xl border border-line p-4"
+                className="rounded-2xl border border-white/20 bg-white/10 p-4"
               >
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <b className="text-navy">{concept.label}</b>
-                  <span className="text-lg font-extrabold text-scout-700">
+                  <b className="text-white">{concept.label}</b>
+                  <span className="text-lg font-extrabold text-amber-300">
                     {formatCOP(concept.amount)}
                   </span>
                 </div>
@@ -205,69 +218,71 @@ export default async function GroupPaymentsPage() {
                 {concept.blocked ? (
                   <Alert tone="info">{concept.blocked}</Alert>
                 ) : (
-                  <PaymentForm
-                    payableType={concept.payableType}
-                    payableId={concept.payableId}
-                    concept={concept.label}
-                    expectedAmount={concept.amount}
-                    maxProofMb={settings.max_proof_mb}
-                  />
+                  <div className="rounded-2xl bg-jade p-4">
+                    <PaymentForm
+                      payableType={concept.payableType}
+                      payableId={concept.payableId}
+                      concept={concept.label}
+                      expectedAmount={concept.amount}
+                      maxProofMb={settings.max_proof_mb}
+                    />
+                  </div>
                 )}
               </li>
             ))}
           </ul>
         )}
-      </Panel>
+      </section>
 
-      <Panel title="Historial de pagos">
+      <section className="rounded-3xl bg-scout-600 p-5 text-white">
+        <h3 className={`mb-3 ${cardTitleClass}`}>Historial de pagos</h3>
+
         {paymentRows.length === 0 ? (
-          <EmptyState icon="💳" title="Todavía no has registrado pagos" />
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Concepto</th>
-                  <th>Referencia</th>
-                  <th className="text-right">Valor</th>
-                  <th>Fecha</th>
-                  <th>Estado</th>
-                  <th>Comprobante</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paymentRows.map((payment) => (
-                  <tr key={payment.id}>
-                    <td className="font-semibold text-navy">{payment.concept}</td>
-                    <td className="font-mono text-xs">{payment.reference}</td>
-                    <td className="whitespace-nowrap text-right">
-                      {formatCOP(Number(payment.reported_amount))}
-                    </td>
-                    <td className="whitespace-nowrap text-xs">
-                      {formatDate(payment.payment_date)}
-                      <br />
-                      <small className="text-slate-400">
-                        enviado {formatRelative(payment.created_at)}
-                      </small>
-                    </td>
-                    <td>
-                      <StatusBadge status={paymentStatusView(payment.status)} />
-                      {payment.admin_note && (
-                        <p className="mt-1 max-w-[220px] text-xs text-slate-500">
-                          {payment.admin_note}
-                        </p>
-                      )}
-                    </td>
-                    <td>
-                      <ProofLink path={payment.proof_path} name={payment.proof_name} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="rounded-2xl border border-dashed border-white/30 px-4 py-8 text-center">
+            <span className="mb-2 block text-3xl" aria-hidden>
+              💳
+            </span>
+            <p className="font-semibold text-white">Todavía no has registrado pagos</p>
           </div>
+        ) : (
+          <ul className="space-y-2.5">
+            {paymentRows.map((payment) => (
+              <li
+                key={payment.id}
+                className="rounded-2xl border border-white/20 bg-white/10 p-4"
+              >
+                <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <b className="block truncate text-white">{payment.concept}</b>
+                    <p className="font-mono text-xs text-white/60">{payment.reference}</p>
+                  </div>
+                  <span className="text-lg font-extrabold text-amber-300">
+                    {formatCOP(Number(payment.reported_amount))}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-xs text-white/70">
+                    {formatDate(payment.payment_date)}
+                    <br />
+                    <small className="text-white/50">
+                      enviado {formatRelative(payment.created_at)}
+                    </small>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={paymentStatusView(payment.status)} />
+                    <ProofLink path={payment.proof_path} name={payment.proof_name} />
+                  </div>
+                </div>
+
+                {payment.admin_note && (
+                  <p className="mt-2 text-xs text-white/70">{payment.admin_note}</p>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
-      </Panel>
-    </>
+      </section>
+    </div>
   );
 }
