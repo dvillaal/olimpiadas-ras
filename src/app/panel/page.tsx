@@ -107,7 +107,7 @@ export default async function PanelHomePage() {
                 >
                   ¡Olim
                   <br />
-                  pia
+                  <span className="ml-[0.35em]">pia</span>
                   <br />
                   das!
                 </p>

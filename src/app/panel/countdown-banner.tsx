@@ -51,7 +51,7 @@ export function CountdownBanner({ targetIso }: { targetIso: string | null }) {
         ) : remaining ? (
           <>
             FALTAN{' '}
-            {remaining.days > 0 && <span>{remaining.days}d </span>}
+            {remaining.days > 0 && <span>{remaining.days} DÍAS </span>}
             {pad(remaining.h)}:{pad(remaining.m)}:{pad(remaining.s)}
           </>
         ) : (
