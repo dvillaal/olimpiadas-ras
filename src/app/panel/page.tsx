@@ -148,7 +148,7 @@ export default async function PanelHomePage() {
             </div>
           </section>
 
-          {/* ─── País + Avisos | Primeros pasos ─────────────────────────── */}
+          {/* ─── País + Primeros pasos | Avisos ─────────────────────────── */}
           <div className="grid gap-5 lg:grid-cols-2">
             <div className="space-y-5">
               {group.country_code && country && (
@@ -165,79 +165,81 @@ export default async function PanelHomePage() {
                 </div>
               )}
 
-              {/* ─── Avisos ──────────────────────────────────────────────── */}
-              <section className="rounded-3xl bg-plum p-6 text-white">
-                <h3 className={cardTitle}>
-                  Avisos{unreadCount > 0 ? ` (${unreadCount})` : ''}
-                </h3>
-                <p className="mb-4 text-sm text-white/75">Novedades sobre tus pagos y solicitudes.</p>
-
-                {(notifications ?? []).length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/25 px-4 py-8 text-center">
-                    <span className="mb-2 block text-3xl" aria-hidden>
-                      🔔
-                    </span>
-                    <p className="font-semibold text-white">Sin avisos por ahora</p>
+              {/* ─── Primeros pasos ──────────────────────────────────────── */}
+              <section className="flex flex-col rounded-3xl bg-scout-600 p-6 text-white">
+                <div className="mb-1 flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className={cardTitle}>Primeros pasos</h3>
+                    <p className="text-sm text-white/75">
+                      Cuatro pasos para completar la inscripción.
+                    </p>
                   </div>
-                ) : (
-                  <NotificationList
-                    tone="dark"
-                    notifications={(notifications ?? []).map((n) => ({
-                      id: n.id,
-                      title: n.title,
-                      body: n.body,
-                      link: n.link,
-                      kind: n.kind,
-                      unread: !n.read_at,
-                      when: formatRelative(n.created_at),
-                    }))}
-                    hasUnread={unreadCount > 0}
+                  <span className="shrink-0 rounded-full bg-white/15 px-3 py-1 text-sm font-black">
+                    {Math.round(progress.percent)}%
+                  </span>
+                </div>
+
+                <div
+                  role="progressbar"
+                  aria-valuenow={Math.round(progress.percent)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Progreso de inscripción"
+                  className="mt-3 h-2 overflow-hidden rounded-full bg-white/20"
+                >
+                  <div
+                    className="h-full rounded-full bg-white transition-[width] duration-500"
+                    style={{ width: `${Math.max(0, Math.min(100, Math.round(progress.percent)))}%` }}
                   />
-                )}
+                </div>
+
+                <ul className="mt-4 flex-1 space-y-2.5">
+                  {progress.steps.map((step) => (
+                    <li key={step.key} className="flex items-center gap-3 text-sm">
+                      <span
+                        aria-hidden
+                        className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-black ${
+                          step.done ? 'bg-white text-scout-700' : 'bg-white/15 text-white/60'
+                        }`}
+                      >
+                        {step.done ? '✓' : '·'}
+                      </span>
+                      <span className={step.done ? 'text-white' : 'text-white/60'}>
+                        {step.label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </section>
             </div>
 
-            {/* ─── Primeros pasos ────────────────────────────────────────── */}
-            <section className="flex flex-col rounded-3xl bg-scout-600 p-6 text-white">
-              <div className="mb-1 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className={cardTitle}>Primeros pasos</h3>
-                  <p className="text-sm text-white/75">Cuatro pasos para completar la inscripción.</p>
+            {/* ─── Avisos ──────────────────────────────────────────────── */}
+            <section className="rounded-3xl bg-plum p-6 text-white">
+              <h3 className={cardTitle}>Avisos{unreadCount > 0 ? ` (${unreadCount})` : ''}</h3>
+              <p className="mb-4 text-sm text-white/75">Novedades sobre tus pagos y solicitudes.</p>
+
+              {(notifications ?? []).length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/25 px-4 py-8 text-center">
+                  <span className="mb-2 block text-3xl" aria-hidden>
+                    🔔
+                  </span>
+                  <p className="font-semibold text-white">Sin avisos por ahora</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-white/15 px-3 py-1 text-sm font-black">
-                  {Math.round(progress.percent)}%
-                </span>
-              </div>
-
-              <div
-                role="progressbar"
-                aria-valuenow={Math.round(progress.percent)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Progreso de inscripción"
-                className="mt-3 h-2 overflow-hidden rounded-full bg-white/20"
-              >
-                <div
-                  className="h-full rounded-full bg-white transition-[width] duration-500"
-                  style={{ width: `${Math.max(0, Math.min(100, Math.round(progress.percent)))}%` }}
+              ) : (
+                <NotificationList
+                  tone="dark"
+                  notifications={(notifications ?? []).map((n) => ({
+                    id: n.id,
+                    title: n.title,
+                    body: n.body,
+                    link: n.link,
+                    kind: n.kind,
+                    unread: !n.read_at,
+                    when: formatRelative(n.created_at),
+                  }))}
+                  hasUnread={unreadCount > 0}
                 />
-              </div>
-
-              <ul className="mt-4 flex-1 space-y-2.5">
-                {progress.steps.map((step) => (
-                  <li key={step.key} className="flex items-center gap-3 text-sm">
-                    <span
-                      aria-hidden
-                      className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-black ${
-                        step.done ? 'bg-white text-scout-700' : 'bg-white/15 text-white/60'
-                      }`}
-                    >
-                      {step.done ? '✓' : '·'}
-                    </span>
-                    <span className={step.done ? 'text-white' : 'text-white/60'}>{step.label}</span>
-                  </li>
-                ))}
-              </ul>
+              )}
             </section>
           </div>
 
