@@ -26,11 +26,15 @@ const KIND_DOT: Record<string, string> = {
 export function NotificationList({
   notifications,
   hasUnread,
+  tone = 'light',
 }: {
   notifications: NotificationItem[];
   hasUnread: boolean;
+  /** "dark" se usa sobre fondos de color sólido (el panel morado de Avisos). */
+  tone?: 'light' | 'dark';
 }) {
   const [pending, startTransition] = useTransition();
+  const dark = tone === 'dark';
 
   return (
     <div>
@@ -45,13 +49,25 @@ export function NotificationList({
                 }`}
               />
               <div className="min-w-0">
-                <p className={`text-sm ${notification.unread ? 'font-bold text-navy' : 'text-navy'}`}>
+                <p
+                  className={`text-sm ${
+                    dark
+                      ? 'font-semibold text-white'
+                      : notification.unread
+                        ? 'font-bold text-navy'
+                        : 'text-navy'
+                  }`}
+                >
                   {notification.title}
                 </p>
                 {notification.body && (
-                  <p className="text-sm text-slate-600">{notification.body}</p>
+                  <p className={`text-sm ${dark ? 'text-white/80' : 'text-slate-600'}`}>
+                    {notification.body}
+                  </p>
                 )}
-                <p className="mt-0.5 text-xs text-slate-400">{notification.when}</p>
+                <p className={`mt-0.5 text-xs ${dark ? 'text-white/55' : 'text-slate-400'}`}>
+                  {notification.when}
+                </p>
               </div>
             </>
           );
@@ -61,7 +77,9 @@ export function NotificationList({
               {notification.link ? (
                 <Link
                   href={internalRoute(notification.link)}
-                  className="flex gap-3 rounded-lg p-1 transition-colors hover:bg-canvas"
+                  className={`flex gap-3 rounded-lg p-1 transition-colors ${
+                    dark ? 'hover:bg-white/10' : 'hover:bg-canvas'
+                  }`}
                 >
                   {content}
                 </Link>
@@ -78,7 +96,7 @@ export function NotificationList({
           type="button"
           size="sm"
           variant="ghost"
-          className="mt-4"
+          className={`mt-4 ${dark ? '!border-white/30 !text-white hover:!bg-white/10' : ''}`}
           disabled={pending}
           onClick={() => startTransition(() => markNotificationsReadAction())}
         >

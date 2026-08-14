@@ -236,6 +236,10 @@ export const reviewPaymentSchema = z
 
 export const settingsSchema = z.object({
   eventName: trimmed(3, 120, 'El nombre del evento'),
+  eventStartsAt: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim() ? value.trim() : null)),
   individualFee: z.coerce.number().min(0),
   groupTeamFee: z.coerce.number().min(0),
   standFee: z.coerce.number().min(0),

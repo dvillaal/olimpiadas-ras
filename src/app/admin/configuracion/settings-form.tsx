@@ -8,6 +8,15 @@ import type { Settings } from '@/types/database';
 import { Alert, Button, Field } from '@/components/ui';
 import { useToast } from '@/components/toast';
 
+/** El input datetime-local necesita "YYYY-MM-DDTHH:mm" en hora local, sin zona. */
+function toDatetimeLocal(iso: string | null): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -42,6 +51,21 @@ export function SettingsForm({ settings }: { settings: Settings }) {
             required
             className="field-input"
             defaultValue={settings.event_name}
+          />
+        </Field>
+
+        <Field
+          label="Fecha y hora de inicio"
+          htmlFor="eventStartsAt"
+          error={errors.eventStartsAt}
+          hint="Alimenta la cuenta regresiva que ven los grupos en su panel. Déjalo vacío para ocultarla."
+        >
+          <input
+            id="eventStartsAt"
+            name="eventStartsAt"
+            type="datetime-local"
+            className="field-input"
+            defaultValue={toDatetimeLocal(settings.event_starts_at)}
           />
         </Field>
 

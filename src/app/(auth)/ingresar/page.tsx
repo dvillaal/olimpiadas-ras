@@ -1,18 +1,11 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import localFont from 'next/font/local';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { displayFont as display } from '@/lib/fonts';
 import { LoginForm } from './login-form';
 
 export const metadata: Metadata = { title: 'Ingresar' };
-
-/** Tipografía de la portada: FatFrank, provista por la organización. */
-const display = localFont({
-  src: '../../../../public/fonts/FatFrank.otf',
-  variable: '--font-display',
-  display: 'swap',
-});
 
 async function getEventName(): Promise<string> {
   try {

@@ -326,6 +326,7 @@ export async function saveSettingsAction(
 
   const parsed = settingsSchema.safeParse({
     eventName: formData.get('eventName'),
+    eventStartsAt: formData.get('eventStartsAt'),
     individualFee: formData.get('individualFee'),
     groupTeamFee: formData.get('groupTeamFee'),
     standFee: formData.get('standFee'),
@@ -349,6 +350,7 @@ export async function saveSettingsAction(
     .from('settings')
     .update({
       event_name: input.eventName,
+      event_starts_at: input.eventStartsAt,
       individual_fee: input.individualFee,
       group_team_fee: input.groupTeamFee,
       stand_fee: input.standFee,

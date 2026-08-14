@@ -80,25 +80,25 @@ export function IndividualRegistrationForm({
         <Alert tone="error">{state.errors.participantIds}</Alert>
       )}
 
-      <ul className="max-h-56 space-y-1.5 overflow-y-auto rounded-xl border border-line p-2">
+      <ul className="scrollbar-dark max-h-56 space-y-1.5 overflow-y-auto rounded-xl border border-white/20 p-2">
         {participants.map((participant) => (
           <li key={participant.id}>
             <label
               className={`flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm transition-colors ${
-                selected.includes(participant.id) ? 'bg-scout-50' : 'hover:bg-canvas'
+                selected.includes(participant.id) ? 'bg-white/15' : 'hover:bg-white/5'
               }`}
             >
               <input
                 type="checkbox"
                 checked={selected.includes(participant.id)}
                 onChange={() => toggle(participant.id)}
-                className="size-4 accent-scout-600"
+                className="size-4 accent-white"
               />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold text-navy">
+                <span className="block truncate font-semibold text-white">
                   {participant.fullName}
                 </span>
-                <span className="text-xs text-slate-500">{participant.branch}</span>
+                <span className="text-xs text-white/70">{participant.branch}</span>
               </span>
             </label>
           </li>

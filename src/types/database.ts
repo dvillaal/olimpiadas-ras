@@ -55,6 +55,8 @@ type Settings = {
   bank_account_number: string;
   bank_nit: string;
   bank_holder: string;
+  /** Fecha/hora de inicio del evento; null si todavía no se ha definido. */
+  event_starts_at: string | null;
   updated_at: string;
 };
 

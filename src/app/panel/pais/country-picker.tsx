@@ -4,7 +4,7 @@ import { useActionState, useDeferredValue, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { claimCountryAction } from '../actions';
 import type { ActionState } from '@/app/(auth)/actions';
-import { Alert, Badge, Button, EmptyState } from '@/components/ui';
+import { Alert, Badge, Button } from '@/components/ui';
 import { CountryFlag } from '@/components/country-flag';
 import { useActionResult } from '@/lib/hooks/use-action-result';
 
@@ -67,12 +67,12 @@ export function CountryPicker({
 
       {/* Confirmación explícita: la elección es prácticamente definitiva. */}
       {selected && (
-        <div className="mb-5 rounded-2xl border-2 border-scout-400 bg-scout-50 p-5">
+        <div className="mb-5 rounded-2xl border-2 border-white/40 bg-white/10 p-5">
           <div className="flex flex-wrap items-center gap-4">
             <CountryFlag code={selected.code} name={selected.name} size="lg" />
             <div className="min-w-0 flex-1">
-              <p className="text-lg font-extrabold text-navy">{selected.name}</p>
-              <p className="text-sm text-slate-600">
+              <p className="text-lg font-extrabold text-white">{selected.name}</p>
+              <p className="text-sm text-white/75">
                 Su grupo representará a este país durante todo el evento.
               </p>
             </div>
@@ -80,7 +80,13 @@ export function CountryPicker({
           <form action={formAction} className="mt-4 flex flex-wrap gap-2">
             <input type="hidden" name="code" value={selected.code} />
             <ConfirmButton countryName={selected.name} />
-            <Button type="button" variant="ghost" size="lg" onClick={() => setSelected(null)}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              onClick={() => setSelected(null)}
+              className="!border-white/40 !text-white hover:!bg-white/10"
+            >
               Cancelar
             </Button>
           </form>
@@ -94,25 +100,33 @@ export function CountryPicker({
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar país…"
           aria-label="Buscar país"
-          className="field-input max-w-xs flex-1"
+          className="max-w-xs flex-1 rounded-xl border border-white/30 bg-white/10 px-3.5 py-2.5
+                     text-[15px] text-white placeholder:text-white/50 transition-colors
+                     focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/20"
         />
-        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-navy">
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-white">
           <input
             type="checkbox"
             checked={onlyAvailable}
             onChange={(event) => setOnlyAvailable(event.target.checked)}
-            className="size-4 accent-scout-600"
+            className="size-4 accent-white"
           />
           Solo disponibles
         </label>
       </div>
 
-      <p className="mb-3 text-sm text-slate-500" aria-live="polite">
+      <p className="mb-3 text-sm text-white/70" aria-live="polite">
         {visible.length} país(es)
       </p>
 
       {visible.length === 0 ? (
-        <EmptyState icon="🔍" title="Ningún país coincide" description="Prueba con otro término." />
+        <div className="rounded-xl border border-dashed border-white/30 px-4 py-8 text-center">
+          <span className="mb-2 block text-3xl" aria-hidden>
+            🔍
+          </span>
+          <p className="font-semibold text-white">Ningún país coincide</p>
+          <p className="mt-1 text-sm text-white/75">Prueba con otro término.</p>
+        </div>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((country) => {
@@ -125,15 +139,15 @@ export function CountryPicker({
                   onClick={() => setSelected(country)}
                   className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors ${
                     country.isMine
-                      ? 'border-scout-500 bg-scout-50'
+                      ? 'border-white/50 bg-white/15'
                       : available && !hasCountry
-                        ? 'border-line bg-white hover:border-scout-400 hover:bg-scout-50'
-                        : 'cursor-not-allowed border-line bg-slate-50 opacity-70'
+                        ? 'border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10'
+                        : 'cursor-not-allowed border-white/10 bg-white/5 opacity-60'
                   }`}
                 >
                   <CountryFlag code={country.code} name={country.name} size="md" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-bold text-navy">{country.name}</span>
+                    <span className="block truncate font-bold text-white">{country.name}</span>
                     <span className="mt-1 block">
                       {country.isMine ? (
                         <Badge tone="green">Su país</Badge>

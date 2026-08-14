@@ -18,7 +18,7 @@
   --color-scout-900: #0a2a1f;
 
   --color-navy: #18344f;
-  --color-gold: #f5b942;
+  --color-gold: #f5be4a;
   --color-ink: #1f2937;
 
   --color-line: #dbe5df;
@@ -26,6 +26,9 @@
 
   /* Insignia morada de la portada de acceso (logos Scouts de Colombia / Antioquia Scout). */
   --color-plum: #4a2a78;
+  /* Morado claro y su análogo verde: tarjetas internas sobre fondos de color en el panel del grupo. */
+  --color-lilac: #8d5da3;
+  --color-jade: #36a592;
 
   --radius-card: 18px;
   --shadow-card: 0 4px 15px rgba(24, 52, 79, 0.05);
@@ -57,6 +60,53 @@
 
   ::selection {
     background: var(--color-scout-200);
+  }
+
+  /*
+   * Scrollbar delgado y con los colores de la marca en toda la aplicación
+   * (en vez del scroll gris por defecto del sistema/navegador). `--scrollbar-thumb`
+   * y `--scrollbar-thumb-hover` se redefinen dentro de `.scrollbar-dark` para las
+   * listas que viven sobre fondos de color en el panel del jefe de grupo.
+   */
+  :root {
+    --scrollbar-thumb: color-mix(in srgb, var(--color-scout-500) 55%, transparent);
+    --scrollbar-thumb-hover: var(--color-scout-500);
+    --scrollbar-track: transparent;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Variante para listas/paneles con scroll sobre fondos de color oscuros. */
+  .scrollbar-dark {
+    --scrollbar-thumb: rgba(255, 255, 255, 0.35);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.55);
   }
 }
 

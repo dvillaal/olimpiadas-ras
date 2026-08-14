@@ -49,7 +49,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       userName={context.group.name}
       userRole={context.profile.full_name || 'Responsable'}
       nav={nav}
-      logout={<LogoutButton />}
+      logout={<LogoutButton tone="dark" />}
+      sidebarTone="gold"
     >
       <RealtimeRefresher
         groupId={context.group.id}

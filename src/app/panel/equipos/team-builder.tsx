@@ -153,22 +153,30 @@ export function TeamBuilder({
 
       {state.errors?._ && <Alert tone="error">{state.errors._}</Alert>}
 
-      <Field label="Nombre del equipo" htmlFor={`team-name-${sport.id}`} error={state.errors?.name} required>
+      <Field
+        label="Nombre del equipo"
+        htmlFor={`team-name-${sport.id}`}
+        error={state.errors?.name}
+        required
+        className="[&_.field-label]:text-white"
+      >
         <input
           id={`team-name-${sport.id}`}
           name="name"
           required
-          className="field-input"
+          className="w-full rounded-xl border border-white/30 bg-white/10 px-3.5 py-2.5 text-[15px]
+                     text-white transition-colors placeholder:text-white/50
+                     focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/20"
           defaultValue={initialName ?? defaultName}
           maxLength={80}
         />
       </Field>
 
       <fieldset>
-        <legend className="field-label">
+        <legend className="mb-1.5 block text-sm font-semibold text-white">
           Titulares ({starters.length}/{sport.teamSize})
         </legend>
-        <ul className="max-h-64 space-y-1.5 overflow-y-auto rounded-xl border border-line p-2">
+        <ul className="scrollbar-dark max-h-64 space-y-1.5 overflow-y-auto rounded-xl border border-white/20 p-2">
           {participants.map((participant) => {
             const checked = starters.includes(participant.id);
             const isSubstitute = substitutes.includes(participant.id);
@@ -177,7 +185,7 @@ export function TeamBuilder({
               <li key={participant.id}>
                 <label
                   className={`flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm transition-colors ${
-                    checked ? 'bg-scout-50' : 'hover:bg-canvas'
+                    checked ? 'bg-white/15' : 'hover:bg-white/5'
                   }`}
                 >
                   <input
@@ -185,13 +193,13 @@ export function TeamBuilder({
                     checked={checked}
                     onChange={() => toggle(participant.id, 'starter')}
                     disabled={!checked && starters.length >= sport.teamSize}
-                    className="size-4 accent-scout-600"
+                    className="size-4 accent-white"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold text-navy">
+                    <span className="block truncate font-semibold text-white">
                       {participant.fullName}
                     </span>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-white/70">
                       {participant.branch}
                       {isExternal && ' · de otro grupo'}
                       {isSubstitute && ' · suplente'}
@@ -206,10 +214,10 @@ export function TeamBuilder({
 
       {sport.substitutes > 0 && (
         <fieldset>
-          <legend className="field-label">
+          <legend className="mb-1.5 block text-sm font-semibold text-white">
             Suplentes ({substitutes.length}/{sport.substitutes})
           </legend>
-          <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-xl border border-line p-2">
+          <ul className="scrollbar-dark max-h-40 space-y-1.5 overflow-y-auto rounded-xl border border-white/20 p-2">
             {participants
               .filter((participant) => !starters.includes(participant.id))
               .map((participant) => {
@@ -218,7 +226,7 @@ export function TeamBuilder({
                   <li key={participant.id}>
                     <label
                       className={`flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm ${
-                        checked ? 'bg-scout-50' : 'hover:bg-canvas'
+                        checked ? 'bg-white/15' : 'hover:bg-white/5'
                       }`}
                     >
                       <input
@@ -226,9 +234,11 @@ export function TeamBuilder({
                         checked={checked}
                         onChange={() => toggle(participant.id, 'substitute')}
                         disabled={!checked && substitutes.length >= sport.substitutes}
-                        className="size-4 accent-scout-600"
+                        className="size-4 accent-white"
                       />
-                      <span className="min-w-0 flex-1 truncate">{participant.fullName}</span>
+                      <span className="min-w-0 flex-1 truncate text-white">
+                        {participant.fullName}
+                      </span>
                     </label>
                   </li>
                 );
@@ -238,16 +248,25 @@ export function TeamBuilder({
       )}
 
       {starters.length > 0 && (
-        <Field label="Capitán" htmlFor={`captain-${sport.id}`} hint="Opcional. Debe ser titular.">
+        <Field
+          label="Capitán"
+          htmlFor={`captain-${sport.id}`}
+          hint="Opcional. Debe ser titular."
+          className="[&_.field-label]:text-white [&_p]:text-white/60"
+        >
           <select
             id={`captain-${sport.id}`}
-            className="field-input"
+            className="w-full rounded-xl border border-white/30 bg-white/10 px-3.5 py-2.5 text-[15px]
+                       text-white transition-colors focus:border-white/60 focus:outline-none
+                       focus:ring-2 focus:ring-white/20"
             value={captainId}
             onChange={(event) => setCaptainId(event.target.value)}
           >
-            <option value="">Sin capitán asignado</option>
+            <option value="" className="text-navy">
+              Sin capitán asignado
+            </option>
             {starters.map((id) => (
-              <option key={id} value={id}>
+              <option key={id} value={id} className="text-navy">
                 {byId.get(id)?.fullName}
               </option>
             ))}
@@ -266,7 +285,7 @@ export function TeamBuilder({
       )}
 
       {!complete && starters.length > 0 && (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-white/70">
           Puedes guardarlo incompleto: hasta tener {sport.teamSize} titulares no podrás enviarlo a
           pago. Si te faltan personas, pide apoyo a otro grupo desde{' '}
           <b>Intergrupales</b>.
@@ -274,7 +293,7 @@ export function TeamBuilder({
       )}
 
       <SubmitButton disabled={starters.length === 0 || problems.length > 0} />
-      <p className="text-xs text-slate-500">Equipo de {groupName}.</p>
+      <p className="text-xs text-white/60">Equipo de {groupName}.</p>
     </form>
   );
 }
