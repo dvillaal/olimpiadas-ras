@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { getSessionContext } from '@/lib/auth/session';
 import { groupStatusView } from '@/lib/domain/status';
@@ -24,8 +25,8 @@ export default async function RegistrationStatusPage() {
     <main id="contenido" className="grid min-h-screen place-items-center bg-canvas px-5 py-12">
       <div className="w-full max-w-lg">
         <div className="panel p-7 text-center">
-          <span className="mb-4 inline-grid size-16 place-items-center rounded-2xl bg-scout-100 text-3xl">
-            ⚜
+          <span className="relative mb-4 inline-grid size-16 place-items-center rounded-2xl bg-scout-100 p-2.5">
+            <Image src="/login/trofeo.png" alt="" aria-hidden fill className="object-contain p-2" />
           </span>
           <h1 className="text-2xl font-extrabold text-navy">{context.group.name}</h1>
           <div className="mt-3">

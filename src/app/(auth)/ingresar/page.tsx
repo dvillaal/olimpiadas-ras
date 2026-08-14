@@ -81,8 +81,8 @@ export default async function LoginPage({
 
         <div className="relative z-10 w-full max-w-md">
           <div className="mb-6 flex items-center gap-2.5 text-lg font-black text-scout-700 lg:hidden">
-            <span className="grid size-10 place-items-center rounded-xl bg-scout-600 text-xl text-white">
-              ⚜
+            <span className="relative grid size-10 place-items-center rounded-xl bg-scout-600 p-1.5">
+              <Image src="/login/trofeo.png" alt="" aria-hidden fill className="object-contain p-1" />
             </span>
             {eventName}
           </div>

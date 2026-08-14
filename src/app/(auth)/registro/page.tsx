@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { Alert } from '@/components/ui';
@@ -26,8 +27,8 @@ export default async function RegisterPage() {
     <main id="contenido" className="min-h-screen bg-canvas px-5 py-10">
       <div className="mx-auto w-full max-w-2xl">
         <Link href="/ingresar" className="mb-6 inline-flex items-center gap-2.5 font-black text-scout-700">
-          <span className="grid size-10 place-items-center rounded-xl bg-scout-600 text-xl text-white">
-            ⚜
+          <span className="relative grid size-10 place-items-center rounded-xl bg-scout-600 p-1.5">
+            <Image src="/login/trofeo.png" alt="" aria-hidden fill className="object-contain p-1" />
           </span>
           {eventName}
         </Link>

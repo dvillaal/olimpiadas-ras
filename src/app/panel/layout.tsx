@@ -1,4 +1,4 @@
-import { requireGroup, getSettings } from '@/lib/auth/session';
+import { requireGroup } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { AppShell, type NavItem } from '@/components/shell';
 import { LogoutButton } from '@/components/logout-button';
@@ -13,7 +13,6 @@ import { RealtimeRefresher } from '@/components/realtime-refresher';
  */
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const context = await requireGroup();
-  const settings = await getSettings();
   const supabase = await createClient();
 
   const [{ count: pendingRequests }, { count: unreadNotifications }] = await Promise.all([
@@ -44,8 +43,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   return (
     <AppShell
-      eventName={settings.event_name}
-      subtitle={context.group.code ?? 'Grupo scout'}
+      eventName={context.group.name}
+      subtitle={context.group.code ? `Código de inscripción: ${context.group.code}` : 'Grupo scout'}
       userName={context.group.name}
       userRole={context.profile.full_name || 'Responsable'}
       nav={nav}

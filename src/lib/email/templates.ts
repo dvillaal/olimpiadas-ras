@@ -23,6 +23,12 @@ function escapeHtml(value: string): string {
   );
 }
 
+/** URL absoluta: los correos no pueden usar rutas relativas como /login/trofeo.png. */
+function siteUrl(path = ''): string {
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+  return `${base.replace(/\/$/, '')}${path}`;
+}
+
 function layout(options: { title: string; body: string; eventName: string; cta?: { label: string; url: string } }) {
   const cta = options.cta
     ? `<tr><td style="padding:8px 32px 32px">
@@ -44,7 +50,10 @@ function layout(options: { title: string; body: string; eventName: string; cta?:
        style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;
               box-shadow:0 8px 30px rgba(24,52,79,.08)">
   <tr><td style="background:${BRAND.green};padding:24px 32px;color:#ffffff">
-    <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.85">⚜ ${escapeHtml(options.eventName)}</div>
+    <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.85">
+      <img src="${siteUrl('/login/trofeo.png')}" alt="" width="14" height="14"
+           style="vertical-align:middle;margin-right:4px;display:inline-block">${escapeHtml(options.eventName)}
+    </div>
     <div style="font-size:22px;font-weight:800;margin-top:6px">${escapeHtml(options.title)}</div>
   </td></tr>
   <tr><td style="padding:28px 32px 8px;color:${BRAND.navy};font-size:15px;line-height:1.65">

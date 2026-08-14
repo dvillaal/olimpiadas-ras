@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 import { cn } from '@/lib/utils';
@@ -73,13 +74,8 @@ export function AppShell({
             gold ? 'border-navy/15' : 'border-white/10',
           )}
         >
-          <span
-            className={cn(
-              'grid size-11 shrink-0 place-items-center rounded-xl bg-white text-xl',
-              gold ? 'text-amber-700' : 'text-scout-600',
-            )}
-          >
-            ⚜
+          <span className="relative grid size-11 shrink-0 place-items-center rounded-xl bg-white p-1.5">
+            <Image src="/login/trofeo.png" alt="" aria-hidden fill className="object-contain p-1.5" />
           </span>
           <div className="min-w-0">
             <b className="block truncate text-[15px]">{eventName}</b>

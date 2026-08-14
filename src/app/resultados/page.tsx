@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { formatCompetitionDate, shortTime } from '@/lib/domain/competitions';
@@ -52,8 +53,16 @@ export default async function PublicResultsPage() {
         </Link>
 
         <div className="mt-4 rounded-2xl bg-scout-800 px-6 py-8 text-white">
-          <span className="text-xs font-bold uppercase tracking-[0.16em] text-white/60">
-            ⚜ {eventName}
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-white/60">
+            <Image
+              src="/login/trofeo.png"
+              alt=""
+              aria-hidden
+              width={14}
+              height={14}
+              className="object-contain"
+            />
+            {eventName}
           </span>
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">Programación y resultados</h1>
           <p className="mt-2 max-w-2xl text-white/75">
