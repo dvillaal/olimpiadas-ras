@@ -45,14 +45,13 @@ export function CountdownBanner({ targetIso }: { targetIso: string | null }) {
 
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-scout-500 px-6 py-4 text-white shadow-[var(--shadow-card)]">
-      <p className="text-xl font-black tracking-tight sm:text-2xl">
+      <p className="text-lg font-black tracking-tight sm:text-2xl">
         {!mounted ? (
-          'FALTAN --:--:--'
+          'FALTAN --'
         ) : remaining ? (
           <>
-            FALTAN{' '}
-            {remaining.days > 0 && <span>{remaining.days} DÍAS </span>}
-            {pad(remaining.h)}:{pad(remaining.m)}:{pad(remaining.s)}
+            FALTAN {remaining.days} DÍAS {pad(remaining.h)} HORAS {pad(remaining.m)} MINUTOS{' '}
+            {pad(remaining.s)} SEGUNDOS
           </>
         ) : (
           '¡El evento ya comenzó!'
