@@ -120,8 +120,6 @@ export const participantSchema = z.object({
     }, 'La fecha de nacimiento no es válida.'),
   branchId: z.string().min(1, 'Selecciona una rama.'),
   gender: genderSchema.optional(),
-  phone: z.union([phoneSchema, z.literal('')]).optional().default(''),
-  email: z.union([z.email('Correo inválido.').toLowerCase(), z.literal('')]).optional().default(''),
   active: z.boolean().default(true),
   notes: optionalText(300),
 });

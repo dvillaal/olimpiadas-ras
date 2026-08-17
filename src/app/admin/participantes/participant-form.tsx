@@ -98,22 +98,13 @@ export function ParticipantForm({
         </Field>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-[110px_minmax(0,1fr)]">
-        <Field label="Género" htmlFor="gender" error={errors.gender}>
-          <select id="gender" name="gender" className="field-input" defaultValue="">
-            <option value="">—</option>
-            <option value="F">F</option>
-            <option value="M">M</option>
-            <option value="O">O</option>
-          </select>
-        </Field>
-        <Field label="Teléfono" htmlFor="phone" error={errors.phone}>
-          <input id="phone" name="phone" className="field-input" inputMode="tel" />
-        </Field>
-      </div>
-
-      <Field label="Correo" htmlFor="email" error={errors.email}>
-        <input id="email" name="email" type="email" className="field-input" inputMode="email" />
+      <Field label="Género" htmlFor="gender" error={errors.gender} className="sm:w-[130px]">
+        <select id="gender" name="gender" className="field-input" defaultValue="">
+          <option value="">—</option>
+          <option value="F">F</option>
+          <option value="M">M</option>
+          <option value="O">O</option>
+        </select>
       </Field>
 
       <Field

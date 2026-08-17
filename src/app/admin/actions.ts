@@ -412,8 +412,6 @@ export async function saveParticipantAction(
     birthdate: formData.get('birthdate'),
     branchId: formData.get('branchId'),
     gender: formData.get('gender') || undefined,
-    phone: formData.get('phone') ?? '',
-    email: formData.get('email') ?? '',
     active: formData.get('active') !== 'false',
     notes: formData.get('notes') ?? '',
   });
@@ -432,8 +430,6 @@ export async function saveParticipantAction(
     birthdate: input.birthdate,
     branch_id: input.branchId,
     gender: input.gender ?? null,
-    phone: input.phone ?? '',
-    email: input.email || null,
     active: input.active,
     notes: input.notes,
   };

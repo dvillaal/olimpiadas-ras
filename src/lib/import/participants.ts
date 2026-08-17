@@ -19,9 +19,6 @@ export const PARTICIPANT_COLUMNS = [
   'FECHA_NACIMIENTO',
   'RAMA',
   'GENERO',
-  'TELEFONO',
-  'CORREO',
-  'ESTADO',
   'OBSERVACIONES',
 ] as const;
 
@@ -44,8 +41,6 @@ export interface ParsedParticipant {
   birthdate: string;
   branchId: string;
   gender: Gender | null;
-  phone: string;
-  email: string;
   active: boolean;
   notes: string;
 }
@@ -248,21 +243,6 @@ export function validateRows(rows: readonly RawRow[], context: ImportContext): I
       rowIssues.push({ row, column: 'GENERO', message: 'Usa F, M u O (o déjalo vacío).' });
     }
 
-    const email = cleanText(values.CORREO).toLowerCase();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      rowIssues.push({ row, column: 'CORREO', message: 'El correo no tiene un formato válido.' });
-    }
-
-    const phone = cleanText(values.TELEFONO);
-    if (phone && !/^[0-9+()\s-]{7,20}$/.test(phone)) {
-      rowIssues.push({ row, column: 'TELEFONO', message: 'El teléfono no tiene un formato válido.' });
-    }
-
-    const statusRaw = (cleanText(values.ESTADO) || 'ACTIVO').toUpperCase();
-    if (!['ACTIVO', 'INACTIVO'].includes(statusRaw)) {
-      rowIssues.push({ row, column: 'ESTADO', message: 'Usa ACTIVO o INACTIVO.' });
-    }
-
     if (rowIssues.length > 0) {
       issues.push(...rowIssues);
       continue;
@@ -280,9 +260,8 @@ export function validateRows(rows: readonly RawRow[], context: ImportContext): I
       birthdate: birthdate as string,
       branchId,
       gender: genderRaw ? (genderRaw as Gender) : null,
-      phone,
-      email,
-      active: statusRaw === 'ACTIVO',
+      // Ya no se pide en la plantilla: todo participante importado entra activo.
+      active: true,
       notes: cleanText(values.OBSERVACIONES),
     });
   }
@@ -302,9 +281,6 @@ export function buildTemplateCsv(): string {
     '2012-05-20',
     'tropa',
     'F',
-    '3000000000',
-    'correo@ejemplo.com',
-    'ACTIVO',
     'Alergia a los frutos secos; requiere dieta especial',
   ]
     .map((cell) => (/[;,"\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell))

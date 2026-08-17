@@ -124,8 +124,6 @@ type Participant = {
   birthdate: string;
   branch_id: string;
   gender: Gender | null;
-  phone: string;
-  email: string | null;
   active: boolean;
   notes: string;
   created_at: string;

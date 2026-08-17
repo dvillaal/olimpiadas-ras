@@ -129,8 +129,6 @@ export default async function AdminReportsPage() {
       FECHA_NACIMIENTO: p.birthdate,
       RAMA: branchName.get(p.branch_id) ?? p.branch_id,
       GENERO: p.gender ?? '',
-      TELEFONO: p.phone,
-      CORREO: p.email ?? '',
       ESTADO: p.active ? 'ACTIVO' : 'INACTIVO',
       OBSERVACIONES: p.notes,
     })),

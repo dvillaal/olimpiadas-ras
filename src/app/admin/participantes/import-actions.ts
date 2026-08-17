@@ -104,8 +104,6 @@ export async function confirmImportAction(
     birthdate: p.birthdate,
     branch_id: p.branchId,
     gender: p.gender,
-    phone: p.phone,
-    email: p.email || null,
     active: p.active,
     notes: p.notes,
   }));

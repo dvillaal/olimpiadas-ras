@@ -91,9 +91,6 @@ export async function buildTemplateXlsx(options: TemplateOptions): Promise<Array
     { header: 'FECHA_NACIMIENTO', key: 'FECHA_NACIMIENTO', width: 20 },
     { header: 'RAMA', key: 'RAMA', width: 16 },
     { header: 'GENERO', key: 'GENERO', width: 10 },
-    { header: 'TELEFONO', key: 'TELEFONO', width: 16 },
-    { header: 'CORREO', key: 'CORREO', width: 28 },
-    { header: 'ESTADO', key: 'ESTADO', width: 12 },
     { header: 'OBSERVACIONES', key: 'OBSERVACIONES', width: 40 },
   ];
 
@@ -112,9 +109,6 @@ export async function buildTemplateXlsx(options: TemplateOptions): Promise<Array
     FECHA_NACIMIENTO: '2012-05-20',
     RAMA: options.branchIds[0] ?? 'tropa',
     GENERO: 'F',
-    TELEFONO: '3000000000',
-    CORREO: 'correo@ejemplo.com',
-    ESTADO: 'ACTIVO',
     OBSERVACIONES: 'Fila de ejemplo: bórrala antes de importar',
   });
 
@@ -146,11 +140,6 @@ export async function buildTemplateXlsx(options: TemplateOptions): Promise<Array
       allowBlank: true,
       formulae: listFormula(['F', 'M', 'O']),
     };
-    sheet.getCell(`K${row}`).dataValidation = {
-      type: 'list',
-      allowBlank: false,
-      formulae: listFormula(['ACTIVO', 'INACTIVO']),
-    };
     if (options.groupCodes.length > 0) {
       sheet.getCell(`A${row}`).dataValidation = {
         type: 'list',
@@ -163,7 +152,6 @@ export async function buildTemplateXlsx(options: TemplateOptions): Promise<Array
     }
     // El texto evita que Excel convierta documentos largos a notación científica.
     sheet.getCell(`C${row}`).numFmt = '@';
-    sheet.getCell(`I${row}`).numFmt = '@';
   }
 
   // ─── Hoja de instrucciones ───────────────────────────────────────────────
@@ -180,9 +168,6 @@ export async function buildTemplateXlsx(options: TemplateOptions): Promise<Array
     ['FECHA_NACIMIENTO', 'AAAA-MM-DD (por ejemplo 2012-05-20) o DD/MM/AAAA.'],
     ['RAMA', `Una de: ${options.branchIds.join(', ')}.`],
     ['GENERO', 'F, M u O. Puede quedar vacío.'],
-    ['TELEFONO', 'Entre 7 y 20 dígitos. Puede quedar vacío.'],
-    ['CORREO', 'Correo válido. Puede quedar vacío.'],
-    ['ESTADO', 'ACTIVO o INACTIVO. Un participante inactivo no puede inscribirse.'],
     ['OBSERVACIONES', 'Texto libre: alergias, dieta, condiciones médicas. Admite comas y puntos y coma.'],
   ];
 

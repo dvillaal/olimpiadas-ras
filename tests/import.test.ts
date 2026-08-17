@@ -17,7 +17,7 @@ const context: ImportContext = {
 };
 
 const HEADER =
-  'CODIGO_GRUPO;TIPO_DOCUMENTO;NUMERO_DOCUMENTO;NOMBRES;APELLIDOS;FECHA_NACIMIENTO;RAMA;GENERO;TELEFONO;CORREO;ESTADO;OBSERVACIONES';
+  'CODIGO_GRUPO;TIPO_DOCUMENTO;NUMERO_DOCUMENTO;NOMBRES;APELLIDOS;FECHA_NACIMIENTO;RAMA;GENERO;OBSERVACIONES';
 
 describe('normalizeHeader', () => {
   it('quita acentos, espacios y el BOM', () => {
@@ -61,39 +61,38 @@ describe('parseCsv', () => {
    * columnas equivocadas y corrompía el registro entero.
    */
   it('respeta los puntos y coma dentro de un campo entrecomillado', () => {
-    const csv = `${HEADER}\nGS-001;TI;1001;Ana;Ruiz;2012-05-20;tropa;F;3001234567;a@b.com;ACTIVO;"Alergia a nueces; requiere dieta especial"`;
+    const csv = `${HEADER}\nGS-001;TI;1001;Ana;Ruiz;2012-05-20;tropa;F;"Alergia a nueces; requiere dieta especial"`;
     const rows = parseCsv(csv);
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.values.OBSERVACIONES).toBe('Alergia a nueces; requiere dieta especial');
-    expect(rows[0]?.values.ESTADO).toBe('ACTIVO');
   });
 
   it('respeta las comas dentro de un campo entrecomillado', () => {
-    const csv = `${HEADER}\nGS-001;TI;1002;Luis;Mora;2011-01-10;tropa;M;3001234567;l@b.com;ACTIVO;"Vegetariano, sin lácteos"`;
+    const csv = `${HEADER}\nGS-001;TI;1002;Luis;Mora;2011-01-10;tropa;M;"Vegetariano, sin lácteos"`;
     const rows = parseCsv(csv);
     expect(rows[0]?.values.OBSERVACIONES).toBe('Vegetariano, sin lácteos');
   });
 
   it('detecta el separador coma automáticamente', () => {
-    const csv = `${HEADER.replace(/;/g, ',')}\nGS-001,TI,1003,Sara,Gil,2012-02-02,tropa,F,3001234567,s@b.com,ACTIVO,Sin novedad`;
+    const csv = `${HEADER.replace(/;/g, ',')}\nGS-001,TI,1003,Sara,Gil,2012-02-02,tropa,F,Sin novedad`;
     const rows = parseCsv(csv);
     expect(rows[0]?.values.NOMBRES).toBe('Sara');
   });
 
   it('ignora el BOM del inicio', () => {
-    const csv = `﻿${HEADER}\nGS-001;TI;1004;Ema;Paz;2012-03-03;tropa;F;3001234567;e@b.com;ACTIVO;`;
+    const csv = `﻿${HEADER}\nGS-001;TI;1004;Ema;Paz;2012-03-03;tropa;F;`;
     const rows = parseCsv(csv);
     expect(rows[0]?.values.CODIGO_GRUPO).toBe('GS-001');
   });
 
   it('descarta líneas vacías', () => {
-    const csv = `${HEADER}\n\nGS-001;TI;1005;Ivan;Paz;2012-03-03;tropa;M;3001234567;i@b.com;ACTIVO;\n\n`;
+    const csv = `${HEADER}\n\nGS-001;TI;1005;Ivan;Paz;2012-03-03;tropa;M;\n\n`;
     expect(parseCsv(csv)).toHaveLength(1);
   });
 
   it('numera las filas como las ve el usuario en Excel', () => {
-    const csv = `${HEADER}\nGS-001;TI;1006;A;B;2012-01-01;tropa;F;;;ACTIVO;\nGS-001;TI;1007;C;D;2012-01-01;tropa;M;;;ACTIVO;`;
+    const csv = `${HEADER}\nGS-001;TI;1006;A;B;2012-01-01;tropa;F;\nGS-001;TI;1007;C;D;2012-01-01;tropa;M;`;
     const rows = parseCsv(csv);
     expect(rows[0]?.row).toBe(2);
     expect(rows[1]?.row).toBe(3);
@@ -112,9 +111,6 @@ describe('validateRows', () => {
       FECHA_NACIMIENTO: '2012-05-20',
       RAMA: 'tropa',
       GENERO: 'F',
-      TELEFONO: '3001234567',
-      CORREO: 'ana@ejemplo.com',
-      ESTADO: 'ACTIVO',
       OBSERVACIONES: 'Ninguna',
       ...overrides,
     },
@@ -169,23 +165,10 @@ describe('validateRows', () => {
     expect(result.issues.some((i) => i.column === 'FECHA_NACIMIENTO')).toBe(true);
   });
 
-  it('rechaza un correo mal formado', () => {
-    const result = validateRows([row({ CORREO: 'no-es-correo' })], context);
-    expect(result.issues.some((i) => i.column === 'CORREO')).toBe(true);
-  });
-
-  it('acepta correo y teléfono vacíos', () => {
-    const result = validateRows([row({ CORREO: '', TELEFONO: '' })], context);
-    expect(result.issues).toEqual([]);
-  });
-
-  it('interpreta INACTIVO', () => {
-    const result = validateRows([row({ ESTADO: 'INACTIVO' })], context);
-    expect(result.valid[0]?.active).toBe(false);
-  });
-
-  it('asume ACTIVO cuando la columna viene vacía', () => {
-    const result = validateRows([row({ ESTADO: '' })], context);
+  // El formulario ya no pide teléfono, correo ni estado: todo participante
+  // importado entra activo, sin necesidad de columna alguna para lograrlo.
+  it('siempre entra activo, sin importar la fila', () => {
+    const result = validateRows([row()], context);
     expect(result.valid[0]?.active).toBe(true);
   });
 
@@ -200,10 +183,10 @@ describe('validateRows', () => {
 
   it('acumula varios problemas de la misma fila', () => {
     const result = validateRows(
-      [row({ NOMBRES: '', RAMA: 'inventada', CORREO: 'mal' })],
+      [row({ NOMBRES: '', RAMA: 'inventada' })],
       context,
     );
-    expect(result.issues.length).toBeGreaterThanOrEqual(3);
+    expect(result.issues.length).toBeGreaterThanOrEqual(2);
   });
 
   it('separa las filas buenas de las malas en lugar de rechazar todo', () => {
