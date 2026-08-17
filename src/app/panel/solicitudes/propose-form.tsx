@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { proposeParticipantsAction } from '../actions';
 import type { ActionState } from '@/app/(auth)/actions';
-import { Alert, Button } from '@/components/ui';
+import { Alert, Button, Checkbox } from '@/components/ui';
 import { useToast } from '@/components/toast';
 
 function SubmitButton({ count, alreadyProposed }: { count: number; alreadyProposed: boolean }) {
@@ -72,12 +72,11 @@ export function ProposeForm({
                   checked ? 'bg-white/15' : 'hover:bg-white/5'
                 }`}
               >
-                <input
-                  type="checkbox"
+                <Checkbox
+                  tone="dark"
                   checked={checked}
                   onChange={() => toggle(participant.id)}
                   disabled={!checked && selected.length >= maxSlots}
-                  className="size-4 accent-white"
                 />
                 <span className="min-w-0 flex-1 truncate text-white">{participant.fullName}</span>
               </label>

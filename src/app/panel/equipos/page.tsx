@@ -8,6 +8,7 @@ import { Alert, Badge, Button, LinkButton, StatusBadge } from '@/components/ui';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
 import { cardTitleClass } from '@/lib/fonts';
 import { deleteTeamAction } from '../actions';
+import { EditTeamToggle } from './edit-team-toggle';
 
 export const metadata: Metadata = { title: 'Mis equipos' };
 
@@ -16,25 +17,68 @@ export default async function GroupTeamsPage() {
   const settings = await getSettings();
   const supabase = await createClient();
 
-  const [{ data: teams }, { data: members }, { data: participants }, { data: sports }, { data: requests }] =
-    await Promise.all([
-      supabase
-        .from('teams')
-        .select('*')
-        .eq('owner_group_id', group.id)
-        .order('created_at', { ascending: false }),
-      supabase.from('team_members').select('*'),
-      supabase.from('participants').select('id, full_name, group_id'),
-      supabase.from('sports').select('*'),
-      supabase.from('intergroup_requests').select('*').eq('requester_group_id', group.id),
-    ]);
+  const [
+    { data: teams },
+    { data: members },
+    { data: allParticipants },
+    { data: sports },
+    { data: requests },
+    { data: sportBranches },
+    { data: branches },
+    { data: individuals },
+    { data: individualLinks },
+  ] = await Promise.all([
+    supabase
+      .from('teams')
+      .select('*')
+      .eq('owner_group_id', group.id)
+      .order('created_at', { ascending: false }),
+    supabase.from('team_members').select('*'),
+    supabase.from('participants').select('*').eq('active', true),
+    supabase.from('sports').select('*'),
+    supabase.from('intergroup_requests').select('*').eq('requester_group_id', group.id),
+    supabase.from('sport_branches').select('*'),
+    supabase.from('branches').select('*'),
+    supabase.from('individual_registrations').select('*').eq('group_id', group.id),
+    supabase.from('individual_registration_participants').select('*'),
+  ]);
 
   const sportById = new Map((sports ?? []).map((s) => [s.id, s]));
-  const participantById = new Map((participants ?? []).map((p) => [p.id, p]));
+  const participantById = new Map((allParticipants ?? []).map((p) => [p.id, p]));
+  const branchName = new Map((branches ?? []).map((b) => [b.id, b.name]));
+
+  const branchesBySport = new Map<string, string[]>();
+  for (const link of sportBranches ?? []) {
+    branchesBySport.set(link.sport_id, [...(branchesBySport.get(link.sport_id) ?? []), link.branch_id]);
+  }
 
   const membersByTeam = new Map<string, NonNullable<typeof members>>();
   for (const member of members ?? []) {
     membersByTeam.set(member.team_id, [...(membersByTeam.get(member.team_id) ?? []), member]);
+  }
+
+  const myParticipants = (allParticipants ?? []).filter((p) => p.group_id === group.id);
+  const myParticipantIds = new Set(myParticipants.map((p) => p.id));
+
+  // Cuántos deportes distintos tiene ya cada participante propio, para no
+  // dejarlo elegible más allá del tope del deporte al editar un equipo.
+  const sportCount = new Map<string, Set<string>>();
+  for (const member of members ?? []) {
+    if (!myParticipantIds.has(member.participant_id)) continue;
+    const team = (teams ?? []).find((t) => t.id === member.team_id);
+    if (!team || team.status === 'rejected' || team.status === 'cancelled') continue;
+    const set = sportCount.get(member.participant_id) ?? new Set();
+    set.add(team.sport_id);
+    sportCount.set(member.participant_id, set);
+  }
+  for (const link of individualLinks ?? []) {
+    if (!myParticipantIds.has(link.participant_id)) continue;
+    const registration = (individuals ?? []).find((r) => r.id === link.registration_id);
+    if (!registration || registration.status === 'rejected' || registration.status === 'cancelled')
+      continue;
+    const set = sportCount.get(link.participant_id) ?? new Set();
+    set.add(registration.sport_id);
+    sportCount.set(link.participant_id, set);
   }
 
   const rows = teams ?? [];
@@ -105,6 +149,31 @@ export default async function GroupTeamsPage() {
             );
 
             const frame = index % 2 === 0 ? 'bg-plum' : 'bg-scout-600';
+
+            // Elegibles para editar este equipo: participantes propios de rama
+            // habilitada que no excedan el tope de deportes (los que ya están
+            // en ESTE equipo siempre cuentan como elegibles), más los externos
+            // ya presentes en la alineación (aportados por una alianza).
+            const allowedBranches = sport ? (branchesBySport.get(sport.id) ?? []) : [];
+            const rosterParticipantIds = new Set(roster.map((m) => m.participant_id));
+            const eligible = sport
+              ? myParticipants.filter(
+                  (participant) =>
+                    allowedBranches.includes(participant.branch_id) &&
+                    ((sportCount.get(participant.id)?.size ?? 0) < sport.max_sports_per_participant ||
+                      rosterParticipantIds.has(participant.id)),
+                )
+              : [];
+            const externalInRoster = roster
+              .filter((m) => participantById.get(m.participant_id)?.group_id !== group.id)
+              .map((m) => participantById.get(m.participant_id))
+              .filter((p): p is NonNullable<typeof p> => Boolean(p));
+            const editParticipants = [...eligible, ...externalInRoster].map((p) => ({
+              id: p.id,
+              fullName: p.full_name,
+              branch: branchName.get(p.branch_id) ?? p.branch_id,
+              groupId: p.group_id,
+            }));
 
             return (
               <li key={team.id}>
@@ -201,17 +270,37 @@ export default async function GroupTeamsPage() {
                   )}
 
                   {editable ? (
-                    <form action={deleteTeamAction}>
-                      <input type="hidden" name="id" value={team.id} />
-                      <Button
-                        type="submit"
-                        size="sm"
-                        variant="ghost"
-                        className="!border-white/40 !text-white hover:!bg-white/10"
-                      >
-                        Eliminar equipo
-                      </Button>
-                    </form>
+                    <div className="flex flex-wrap gap-2">
+                      {sport && (
+                        <EditTeamToggle
+                          sport={{
+                            id: sport.id,
+                            name: sport.name,
+                            teamSize: sport.team_size,
+                            substitutes: sport.substitutes,
+                            allowIntergroup: sport.allow_intergroup,
+                            maxExternal: sport.max_external,
+                          }}
+                          participants={editParticipants}
+                          groupName={group.name}
+                          teamId={team.id}
+                          initialName={team.name}
+                          initialStarters={starters.map((m) => m.participant_id)}
+                          initialSubstitutes={substitutes.map((m) => m.participant_id)}
+                        />
+                      )}
+                      <form action={deleteTeamAction}>
+                        <input type="hidden" name="id" value={team.id} />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="ghost"
+                          className="!border-white/40 !text-white hover:!bg-white/10"
+                        >
+                          Eliminar equipo
+                        </Button>
+                      </form>
+                    </div>
                   ) : (
                     <p className="text-sm text-white/70">
                       Este equipo ya no admite cambios porque su pago está en curso.

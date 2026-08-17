@@ -2,13 +2,13 @@
 
 import { useActionState, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { saveTeamAction } from '../actions';
+import { saveTeamAsAdminAction } from './actions';
 import type { ActionState } from '@/app/(auth)/actions';
 import { validateRoster, type RosterEntry } from '@/lib/domain/eligibility';
 import { Alert, Button, Checkbox, Field } from '@/components/ui';
 import { useActionResult } from '@/lib/hooks/use-action-result';
 
-export interface BuilderSport {
+export interface AdminEditorSport {
   id: string;
   name: string;
   teamSize: number;
@@ -17,7 +17,7 @@ export interface BuilderSport {
   maxExternal: number;
 }
 
-export interface BuilderParticipant {
+export interface AdminEditorParticipant {
   id: string;
   fullName: string;
   branch: string;
@@ -27,54 +27,47 @@ export interface BuilderParticipant {
 function SubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending || disabled}>
-      {pending ? 'Guardando…' : 'Guardar equipo'}
+    <Button type="submit" size="sm" disabled={pending || disabled}>
+      {pending ? 'Guardando…' : 'Guardar cambios'}
     </Button>
   );
 }
 
 /**
- * Armador de alineaciones.
- *
- * Valida en vivo con las mismas reglas que aplica Postgres, de modo que el
- * usuario ve el problema mientras selecciona en lugar de descubrirlo al enviar.
+ * Editor de alineación para el administrador: mismo motor de reglas que
+ * `TeamBuilder` (panel del jefe de grupo), en tono claro y limitado a editar
+ * equipos ya existentes. Solo admite participantes del grupo dueño del
+ * equipo, más los externos ya aportados por una alianza aceptada.
  */
-export function TeamBuilder({
+export function AdminTeamEditor({
   sport,
   participants,
-  defaultName,
+  groupId,
   groupName,
   teamId,
-  initialStarters = [],
-  initialSubstitutes = [],
   initialName,
+  initialStarters,
+  initialSubstitutes,
+  onDone,
 }: {
-  sport: BuilderSport;
-  participants: BuilderParticipant[];
-  defaultName: string;
+  sport: AdminEditorSport;
+  participants: AdminEditorParticipant[];
+  groupId: string;
   groupName: string;
-  teamId?: string;
-  initialStarters?: string[];
-  initialSubstitutes?: string[];
-  initialName?: string;
+  teamId: string;
+  initialName: string;
+  initialStarters: string[];
+  initialSubstitutes: string[];
+  onDone: () => void;
 }) {
   const [starters, setStarters] = useState<string[]>(initialStarters);
   const [substitutes, setSubstitutes] = useState<string[]>(initialSubstitutes);
   const [captainId, setCaptainId] = useState('');
-  const [state, formAction] = useActionState<ActionState, FormData>(saveTeamAction, {});
+  const [state, formAction] = useActionState<ActionState, FormData>(saveTeamAsAdminAction, {});
 
-  // Al editar un equipo se conserva la selección; al crear uno nuevo se limpia.
-  useActionResult(state, () => {
-    if (teamId) return;
-    setStarters([]);
-    setSubstitutes([]);
-    setCaptainId('');
-  });
+  useActionResult(state, onDone);
 
-  const byId = useMemo(
-    () => new Map(participants.map((p) => [p.id, p])),
-    [participants],
-  );
+  const byId = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
 
   const problems = useMemo(() => {
     const roster: RosterEntry[] = [
@@ -117,10 +110,10 @@ export function TeamBuilder({
         active: true,
         deadline: null,
       },
-      participants[0]?.groupId ?? '',
+      groupId,
       captainId || null,
     );
-  }, [starters, substitutes, captainId, sport, byId, participants]);
+  }, [starters, substitutes, captainId, sport, byId, groupId]);
 
   const toggle = (id: string, role: 'starter' | 'substitute') => {
     const [list, setList] = role === 'starter' ? [starters, setStarters] : [substitutes, setSubstitutes];
@@ -131,18 +124,16 @@ export function TeamBuilder({
       (setList as (v: string[]) => void)((list as string[]).filter((x) => x !== id));
       if (captainId === id) setCaptainId('');
     } else {
-      // Cambiar de rol quita a la persona del otro grupo automáticamente.
       setOther(other.filter((x) => x !== id));
       (setList as (v: string[]) => void)([...(list as string[]), id]);
     }
   };
 
-  const complete = starters.length === sport.teamSize;
-
   return (
-    <form action={formAction} className="space-y-4">
-      {teamId && <input type="hidden" name="id" value={teamId} />}
+    <form action={formAction} className="space-y-4 rounded-xl bg-canvas p-4">
+      <input type="hidden" name="id" value={teamId} />
       <input type="hidden" name="sportId" value={sport.id} />
+      <input type="hidden" name="groupId" value={groupId} />
       {starters.map((id) => (
         <input key={id} type="hidden" name="starters" value={id} />
       ))}
@@ -153,52 +144,43 @@ export function TeamBuilder({
 
       {state.errors?._ && <Alert tone="error">{state.errors._}</Alert>}
 
-      <Field
-        label="Nombre del equipo"
-        htmlFor={`team-name-${sport.id}`}
-        error={state.errors?.name}
-        required
-        className="[&_.field-label]:text-white"
-      >
+      <Field label="Nombre del equipo" htmlFor={`admin-team-name-${teamId}`} error={state.errors?.name} required>
         <input
-          id={`team-name-${sport.id}`}
+          id={`admin-team-name-${teamId}`}
           name="name"
           required
-          className="w-full rounded-xl border border-white/30 bg-white/10 px-3.5 py-2.5 text-[15px]
-                     text-white transition-colors placeholder:text-white/50
-                     focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/20"
-          defaultValue={initialName ?? defaultName}
+          className="field-input"
+          defaultValue={initialName}
           maxLength={80}
         />
       </Field>
 
       <fieldset>
-        <legend className="mb-1.5 block text-sm font-semibold text-white">
+        <legend className="field-label">
           Titulares ({starters.length}/{sport.teamSize})
         </legend>
-        <ul className="scrollbar-dark max-h-64 space-y-1.5 overflow-y-auto rounded-xl border border-white/20 p-2">
+        <ul className="max-h-64 space-y-1.5 overflow-y-auto rounded-xl border border-line p-2">
           {participants.map((participant) => {
             const checked = starters.includes(participant.id);
             const isSubstitute = substitutes.includes(participant.id);
-            const isExternal = participant.groupId !== participants[0]?.groupId;
+            const isExternal = participant.groupId !== groupId;
             return (
               <li key={participant.id}>
                 <label
                   className={`flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm transition-colors ${
-                    checked ? 'bg-white/15' : 'hover:bg-white/5'
+                    checked ? 'bg-scout-50' : 'hover:bg-slate-100'
                   }`}
                 >
                   <Checkbox
-                    tone="dark"
                     checked={checked}
                     onChange={() => toggle(participant.id, 'starter')}
                     disabled={!checked && starters.length >= sport.teamSize}
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold text-white">
+                    <span className="block truncate font-semibold text-navy">
                       {participant.fullName}
                     </span>
-                    <span className="text-xs text-white/70">
+                    <span className="text-xs text-slate-500">
                       {participant.branch}
                       {isExternal && ' · de otro grupo'}
                       {isSubstitute && ' · suplente'}
@@ -213,10 +195,10 @@ export function TeamBuilder({
 
       {sport.substitutes > 0 && (
         <fieldset>
-          <legend className="mb-1.5 block text-sm font-semibold text-white">
+          <legend className="field-label">
             Suplentes ({substitutes.length}/{sport.substitutes})
           </legend>
-          <ul className="scrollbar-dark max-h-40 space-y-1.5 overflow-y-auto rounded-xl border border-white/20 p-2">
+          <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-xl border border-line p-2">
             {participants
               .filter((participant) => !starters.includes(participant.id))
               .map((participant) => {
@@ -225,16 +207,15 @@ export function TeamBuilder({
                   <li key={participant.id}>
                     <label
                       className={`flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm ${
-                        checked ? 'bg-white/15' : 'hover:bg-white/5'
+                        checked ? 'bg-scout-50' : 'hover:bg-slate-100'
                       }`}
                     >
                       <Checkbox
-                        tone="dark"
                         checked={checked}
                         onChange={() => toggle(participant.id, 'substitute')}
                         disabled={!checked && substitutes.length >= sport.substitutes}
                       />
-                      <span className="min-w-0 flex-1 truncate text-white">
+                      <span className="min-w-0 flex-1 truncate text-navy">
                         {participant.fullName}
                       </span>
                     </label>
@@ -246,25 +227,16 @@ export function TeamBuilder({
       )}
 
       {starters.length > 0 && (
-        <Field
-          label="Capitán"
-          htmlFor={`captain-${sport.id}`}
-          hint="Opcional. Debe ser titular."
-          className="[&_.field-label]:text-white [&_p]:text-white/60"
-        >
+        <Field label="Capitán" htmlFor={`admin-captain-${teamId}`} hint="Opcional. Debe ser titular.">
           <select
-            id={`captain-${sport.id}`}
-            className="w-full rounded-xl border border-white/30 bg-white/10 px-3.5 py-2.5 text-[15px]
-                       text-white transition-colors focus:border-white/60 focus:outline-none
-                       focus:ring-2 focus:ring-white/20"
+            id={`admin-captain-${teamId}`}
+            className="field-input"
             value={captainId}
             onChange={(event) => setCaptainId(event.target.value)}
           >
-            <option value="" className="text-navy">
-              Sin capitán asignado
-            </option>
+            <option value="">Sin capitán asignado</option>
             {starters.map((id) => (
-              <option key={id} value={id} className="text-navy">
+              <option key={id} value={id}>
                 {byId.get(id)?.fullName}
               </option>
             ))}
@@ -282,16 +254,13 @@ export function TeamBuilder({
         </Alert>
       )}
 
-      {!complete && starters.length > 0 && (
-        <p className="text-sm text-white/70">
-          Puedes guardarlo incompleto: hasta tener {sport.teamSize} titulares no podrás enviarlo a
-          pago. Si te faltan personas, pide apoyo a otro grupo desde{' '}
-          <b>Intergrupales</b>.
-        </p>
-      )}
-
-      <SubmitButton disabled={starters.length === 0 || problems.length > 0} />
-      <p className="text-xs text-white/60">Equipo de {groupName}.</p>
+      <div className="flex flex-wrap gap-2">
+        <SubmitButton disabled={starters.length === 0 || problems.length > 0} />
+        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+          Cancelar
+        </Button>
+      </div>
+      <p className="text-xs text-slate-500">Equipo de {groupName}.</p>
     </form>
   );
 }

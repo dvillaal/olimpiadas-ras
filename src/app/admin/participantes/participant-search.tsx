@@ -1,7 +1,7 @@
 'use client';
 
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Badge, EmptyState } from '@/components/ui';
+import { Badge, Checkbox, EmptyState } from '@/components/ui';
 
 export interface ParticipantRow {
   id: string;
@@ -78,11 +78,9 @@ export function ParticipantSearch({ participants }: { participants: ParticipantR
           ))}
         </select>
         <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-navy">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={onlyActive}
             onChange={(event) => setOnlyActive(event.target.checked)}
-            className="size-4 accent-scout-600"
           />
           Solo activos
         </label>

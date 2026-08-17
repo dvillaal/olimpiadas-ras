@@ -49,6 +49,25 @@ export const registerGroupSchema = z.object({
 
 export type RegisterGroupInput = z.infer<typeof registerGroupSchema>;
 
+/**
+ * Alta de un grupo hecha por el administrador, sin pasar por el formulario
+ * público. Mismos datos que el registro público, pero sin la casilla de
+ * tratamiento de datos: quien la acepta es el responsable del grupo al
+ * registrarse él mismo, no el administrador en su nombre.
+ */
+export const createGroupSchema = z.object({
+  name: trimmed(3, 120, 'El nombre del grupo'),
+  city: trimmed(2, 80, 'La ciudad'),
+  department: optionalText(80),
+  leaderName: trimmed(3, 120, 'El nombre del responsable'),
+  leaderDocument: documentSchema,
+  leaderEmail: z.email('Escribe un correo válido.').toLowerCase(),
+  leaderPhone: phoneSchema,
+  notes: optionalText(500),
+});
+
+export type CreateGroupInput = z.infer<typeof createGroupSchema>;
+
 export const loginSchema = z.object({
   email: z.email('Escribe un correo válido.').toLowerCase(),
   password: z.string().min(1, 'Escribe tu contraseña.'),

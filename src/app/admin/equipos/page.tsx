@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { formatCOP, sportFee } from '@/lib/domain/fees';
 import { registrationStatusView } from '@/lib/domain/status';
 import { Badge, EmptyState, PageHeader, Panel, StatCard, StatusBadge } from '@/components/ui';
+import { AdminEditTeamToggle } from './admin-edit-team-toggle';
 
 export const metadata: Metadata = { title: 'Equipos' };
 
@@ -20,19 +21,22 @@ export default async function AdminTeamsPage() {
     { data: groups },
     { data: individuals },
     { data: individualParticipants },
+    { data: branches },
   ] = await Promise.all([
     supabase.from('teams').select('*').order('created_at', { ascending: false }),
     supabase.from('team_members').select('*'),
-    supabase.from('participants').select('id, full_name, group_id, branch_id'),
+    supabase.from('participants').select('id, full_name, group_id, branch_id, active'),
     supabase.from('sports').select('*'),
     supabase.from('groups').select('id, name, code'),
     supabase.from('individual_registrations').select('*'),
     supabase.from('individual_registration_participants').select('*'),
+    supabase.from('branches').select('id, name'),
   ]);
 
   const sportById = new Map((sports ?? []).map((s) => [s.id, s]));
   const groupById = new Map((groups ?? []).map((g) => [g.id, g]));
   const participantById = new Map((participants ?? []).map((p) => [p.id, p]));
+  const branchName = new Map((branches ?? []).map((b) => [b.id, b.name]));
 
   const membersByTeam = new Map<string, typeof members>();
   for (const member of members ?? []) {
@@ -78,6 +82,28 @@ export default async function AdminTeamsPage() {
               const external = roster.filter(
                 (m) => participantById.get(m.participant_id)?.group_id !== team.owner_group_id,
               );
+
+              // Elegibles para editar: participantes activos del grupo dueño,
+              // más los externos ya presentes en la alineación (aportados por
+              // una alianza aceptada).
+              const ownParticipants = (participants ?? []).filter(
+                (p) => p.group_id === team.owner_group_id && p.active,
+              );
+              const externalInRoster = roster
+                .map((m) => participantById.get(m.participant_id))
+                .filter(
+                  (p): p is NonNullable<typeof p> =>
+                    Boolean(p) && p!.group_id !== team.owner_group_id,
+                );
+              const editParticipants = [
+                ...ownParticipants,
+                ...externalInRoster.filter((p) => !ownParticipants.some((o) => o.id === p.id)),
+              ].map((p) => ({
+                id: p.id,
+                fullName: p.full_name,
+                branch: branchName.get(p.branch_id) ?? p.branch_id,
+                groupId: p.group_id,
+              }));
 
               return (
                 <li key={team.id} className="rounded-2xl border border-line p-4">
@@ -127,6 +153,28 @@ export default async function AdminTeamsPage() {
                     <p className="mt-2 rounded-lg bg-canvas p-2 text-xs text-slate-600">
                       {team.admin_note}
                     </p>
+                  )}
+
+                  {sport && (
+                    <div className="mt-3">
+                      <AdminEditTeamToggle
+                        sport={{
+                          id: sport.id,
+                          name: sport.name,
+                          teamSize: sport.team_size,
+                          substitutes: sport.substitutes,
+                          allowIntergroup: sport.allow_intergroup,
+                          maxExternal: sport.max_external,
+                        }}
+                        participants={editParticipants}
+                        groupId={team.owner_group_id}
+                        groupName={owner?.name ?? '—'}
+                        teamId={team.id}
+                        initialName={team.name}
+                        initialStarters={starters.map((m) => m.participant_id)}
+                        initialSubstitutes={substitutes.map((m) => m.participant_id)}
+                      />
+                    </div>
                   )}
                 </li>
               );

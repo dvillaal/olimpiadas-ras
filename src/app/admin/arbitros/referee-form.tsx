@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { saveRefereeAction } from './actions';
 import type { ActionState } from '@/app/(auth)/actions';
 import type { Sport } from '@/types/database';
-import { Alert, Button, Field } from '@/components/ui';
+import { Alert, Button, Checkbox, Field } from '@/components/ui';
 import { useActionResult } from '@/lib/hooks/use-action-result';
 
 export interface RefereeRow {
@@ -126,8 +126,7 @@ export function RefereeForm({
         <div className="grid gap-1.5 rounded-xl border border-line p-3 sm:grid-cols-2">
           {sports.map((sport) => (
             <label key={sport.id} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+              <Checkbox
                 name="sportIds"
                 value={sport.id}
                 checked={selected.includes(sport.id)}
@@ -158,12 +157,7 @@ export function RefereeForm({
           «desmarcado» y «no vino en el formulario».
         */}
         <input type="hidden" name="active" value="false" />
-        <input
-          type="checkbox"
-          name="active"
-          value="true"
-          defaultChecked={editing?.active ?? true}
-        />
+        <Checkbox name="active" value="true" defaultChecked={editing?.active ?? true} />
         Árbitro activo
       </label>
 

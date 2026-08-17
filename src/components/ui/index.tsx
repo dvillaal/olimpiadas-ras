@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import type { BadgeTone, StatusView } from '@/lib/domain/status';
@@ -294,6 +294,47 @@ export function Field({
         </p>
       )}
     </div>
+  );
+}
+
+// ─── Checkbox ────────────────────────────────────────────────────────────────
+
+/**
+ * Checkbox propio: el `<input type="checkbox">` del navegador se ve muy
+ * distinto entre sistemas operativos. `appearance-none` lo deja en blanco y el
+ * check se dibuja con un SVG en `background-image`, activado por `:checked` —
+ * sin JS adicional, funciona igual que el nativo (teclado, formularios, etc.).
+ *
+ * `tone="dark"` es para checkboxes sobre fondos de color del panel del jefe de
+ * grupo; el resto de la app usa el tono claro por defecto.
+ */
+
+/** Palomita blanca en SVG, codificada para usarse como background-image inline. */
+const CHECK_ICON_URL =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E";
+
+export function Checkbox({
+  tone = 'light',
+  className,
+  style,
+  ...props
+}: ComponentProps<'input'> & { tone?: 'light' | 'dark' }) {
+  return (
+    <input
+      type="checkbox"
+      className={cn(
+        'peer size-[18px] shrink-0 cursor-pointer appearance-none rounded-md border-2 bg-center bg-no-repeat',
+        'transition-colors duration-150 checked:bg-[length:12px_12px] checked:bg-[image:var(--check-icon)]',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        tone === 'dark'
+          ? 'border-white/40 bg-white/10 checked:border-white checked:bg-scout-600 focus-visible:outline-white'
+          : 'border-line bg-white checked:border-scout-600 checked:bg-scout-600 focus-visible:outline-scout-500',
+        className,
+      )}
+      style={{ '--check-icon': `url("${CHECK_ICON_URL}")`, ...style } as CSSProperties}
+      {...props}
+    />
   );
 }
 

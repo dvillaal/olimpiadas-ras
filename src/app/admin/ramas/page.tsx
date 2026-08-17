@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Badge, Button, EmptyState, PageHeader, Panel } from '@/components/ui';
 import { toggleBranchAction } from '../actions';
 import { BranchForm } from './branch-form';
+import { DeleteBranchButton } from './delete-branch-button';
 
 export const metadata: Metadata = { title: 'Ramas' };
 
@@ -11,15 +12,20 @@ export default async function AdminBranchesPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const [{ data: branches }, { data: participants }] = await Promise.all([
+  const [{ data: branches }, { data: participants }, { data: schedules }] = await Promise.all([
     supabase.from('branches').select('*').order('sort_order').order('name'),
     supabase.from('participants').select('branch_id'),
+    supabase.from('schedules').select('branch_id'),
   ]);
 
   const usage = new Map<string, number>();
   for (const participant of participants ?? []) {
     usage.set(participant.branch_id, (usage.get(participant.branch_id) ?? 0) + 1);
   }
+
+  // Además de participantes, las competencias ya programadas también impiden
+  // borrar la rama (misma restricción de llave foránea que en la base).
+  const hasSchedules = new Set((schedules ?? []).map((s) => s.branch_id));
 
   return (
     <>
@@ -40,6 +46,7 @@ export default async function AdminBranchesPage() {
             <ul className="space-y-2.5">
               {(branches ?? []).map((branch) => {
                 const count = usage.get(branch.id) ?? 0;
+                const deletable = count === 0 && !hasSchedules.has(branch.id);
                 return (
                   <li
                     key={branch.id}
@@ -58,13 +65,29 @@ export default async function AdminBranchesPage() {
                       {branch.active ? 'Activa' : 'Inactiva'}
                     </Badge>
 
-                    <form action={toggleBranchAction}>
-                      <input type="hidden" name="id" value={branch.id} />
-                      <input type="hidden" name="active" value={String(!branch.active)} />
-                      <Button type="submit" size="sm" variant="ghost">
-                        {branch.active ? 'Desactivar' : 'Activar'}
-                      </Button>
-                    </form>
+                    <div className="flex flex-wrap gap-2">
+                      <form action={toggleBranchAction}>
+                        <input type="hidden" name="id" value={branch.id} />
+                        <input type="hidden" name="active" value={String(!branch.active)} />
+                        <Button type="submit" size="sm" variant="ghost">
+                          {branch.active ? 'Desactivar' : 'Activar'}
+                        </Button>
+                      </form>
+
+                      {deletable ? (
+                        <DeleteBranchButton id={branch.id} name={branch.name} />
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled
+                          title="No se puede eliminar: tiene participantes o competencias asociados. Desactívala en su lugar."
+                        >
+                          Eliminar
+                        </Button>
+                      )}
+                    </div>
                   </li>
                 );
               })}

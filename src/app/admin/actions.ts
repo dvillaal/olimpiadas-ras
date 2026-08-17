@@ -163,7 +163,71 @@ export async function toggleBranchAction(formData: FormData): Promise<void> {
   revalidatePath('/admin/ramas');
 }
 
+/**
+ * Elimina una rama por completo (a diferencia de desactivarla). Solo tiene
+ * sentido si nadie la usa todavía: `participants.branch_id` y
+ * `schedules.branch_id` no tienen `on delete cascade`, así que Postgres
+ * rechazaría el borrado con un error de llave foránea si hay algo asociado.
+ * Se verifica antes para dar un mensaje claro en vez de dejar que ese error
+ * llegue crudo (el botón en la UI ya se oculta en ese caso, pero esto cubre
+ * condiciones de carrera: alguien inscribió a alguien un segundo antes).
+ */
+export async function deleteBranchAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const id = String(formData.get('id') ?? '');
+
+  const [{ data: branch }, { count: participantCount }, { count: scheduleCount }] = await Promise.all([
+    supabase.from('branches').select('name').eq('id', id).maybeSingle(),
+    supabase
+      .from('participants')
+      .select('id', { count: 'exact', head: true })
+      .eq('branch_id', id),
+    supabase.from('schedules').select('id', { count: 'exact', head: true }).eq('branch_id', id),
+  ]);
+
+  if (!branch) return { errors: { _: 'Esa rama ya no existe.' } };
+
+  if ((participantCount ?? 0) > 0 || (scheduleCount ?? 0) > 0) {
+    return {
+      errors: {
+        _: 'No se puede eliminar: hay participantes o competencias asociados a esta rama. Desactívala en su lugar.',
+      },
+    };
+  }
+
+  const { error } = await supabase.from('branches').delete().eq('id', id);
+  if (error) return { errors: { _: friendlyError(error) } };
+
+  await supabase.rpc('log_audit', {
+    p_action: `Eliminó la rama ${branch.name}`,
+    p_entity_type: 'branch',
+    p_entity_id: id,
+  });
+
+  revalidatePath('/admin/ramas');
+  return { ok: true, message: `Rama "${branch.name}" eliminada.` };
+}
+
 // ─── Deportes ────────────────────────────────────────────────────────────────
+
+/**
+ * Las ramas nunca compiten entre sí (un lobato no se mide contra un scout), así
+ * que cada rama seleccionada en el formulario produce su propio deporte
+ * independiente, ligado a esa única rama en `sport_branches`. Comparten nombre,
+ * ícono y reglas, pero cada uno tiene su slug (sufijado con la rama para que
+ * sea único) y su propio ciclo de vida: inscripciones, calendario y resultados
+ * de una rama no afectan a los de otra.
+ *
+ * Al editar: la primera rama seleccionada actualiza el deporte que se estaba
+ * editando; cualquier rama adicional crea un deporte nuevo con los mismos
+ * datos del formulario, igual que si se estuviera creando desde cero.
+ */
+function slugForBranch(baseSlug: string, branchId: string): string {
+  const safeBranch = branchId.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `${baseSlug}-${safeBranch}`;
+}
 
 export async function saveSportAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireAdmin();
@@ -193,8 +257,7 @@ export async function saveSportAction(_prev: ActionState, formData: FormData): P
   const input = parsed.data;
   const supabase = await createClient();
 
-  const row = {
-    slug: input.slug,
+  const baseRow = {
     name: input.name,
     icon: input.icon,
     type: input.type,
@@ -212,27 +275,111 @@ export async function saveSportAction(_prev: ActionState, formData: FormData): P
     active: input.active,
   };
 
-  const { data: saved, error } = input.id
-    ? await supabase.from('sports').update(row).eq('id', input.id).select('id').single()
-    : await supabase.from('sports').insert(row).select('id').single();
+  // La primera rama reutiliza el registro que se está editando (si lo hay);
+  // el resto siempre crea deportes nuevos. `sportSchema` exige al menos una
+  // rama, pero TypeScript no lo infiere del `.min(1)`, de ahí la guarda.
+  const [firstBranchId, ...extraBranchIds] = input.branchIds;
+  if (!firstBranchId) return { errors: { branchIds: 'Selecciona al menos una rama.' } };
+  const savedIds: string[] = [];
 
-  if (error || !saved) return { errors: { _: friendlyError(error ?? { message: 'Error' }) } };
+  const { data: firstSaved, error: firstError } = input.id
+    ? await supabase
+        .from('sports')
+        .update({ ...baseRow, slug: slugForBranch(input.slug, firstBranchId) })
+        .eq('id', input.id)
+        .select('id')
+        .single()
+    : await supabase
+        .from('sports')
+        .insert({ ...baseRow, slug: slugForBranch(input.slug, firstBranchId) })
+        .select('id')
+        .single();
 
-  // Se reemplaza el conjunto de ramas: más simple y seguro que calcular deltas.
-  await supabase.from('sport_branches').delete().eq('sport_id', saved.id);
+  if (firstError || !firstSaved) {
+    return { errors: { _: friendlyError(firstError ?? { message: 'Error' }) } };
+  }
+  savedIds.push(firstSaved.id);
+
+  await supabase.from('sport_branches').delete().eq('sport_id', firstSaved.id);
   await supabase
     .from('sport_branches')
-    .insert(input.branchIds.map((branchId) => ({ sport_id: saved.id, branch_id: branchId })));
+    .insert({ sport_id: firstSaved.id, branch_id: firstBranchId });
+
+  for (const branchId of extraBranchIds) {
+    const { data: cloned, error: cloneError } = await supabase
+      .from('sports')
+      .insert({ ...baseRow, slug: slugForBranch(input.slug, branchId) })
+      .select('id')
+      .single();
+
+    if (cloneError || !cloned) {
+      return {
+        errors: {
+          _: `Se guardó el deporte para algunas ramas, pero falló al crear el de "${branchId}": ${friendlyError(cloneError ?? { message: 'Error' })}`,
+        },
+      };
+    }
+
+    savedIds.push(cloned.id);
+    await supabase.from('sport_branches').insert({ sport_id: cloned.id, branch_id: branchId });
+  }
 
   await supabase.rpc('log_audit', {
-    p_action: `${input.id ? 'Actualizó' : 'Creó'} el deporte ${input.name}`,
+    p_action: `${input.id ? 'Actualizó' : 'Creó'} el deporte ${input.name} (${savedIds.length} rama${savedIds.length === 1 ? '' : 's'})`,
     p_entity_type: 'sport',
-    p_entity_id: saved.id,
+    p_entity_id: firstSaved.id,
   });
 
   revalidatePath('/admin/deportes');
   revalidatePath('/panel/deportes');
-  return { ok: true, message: `Deporte "${input.name}" guardado.` };
+  return {
+    ok: true,
+    message:
+      savedIds.length > 1
+        ? `Se crearon ${savedIds.length} deportes "${input.name}", uno por cada rama seleccionada.`
+        : `Deporte "${input.name}" guardado.`,
+  };
+}
+
+export async function deleteSportAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const id = String(formData.get('id') ?? '');
+
+  const [{ data: sport }, { count: teamCount }, { count: individualCount }, { count: scheduleCount }] =
+    await Promise.all([
+      supabase.from('sports').select('name').eq('id', id).maybeSingle(),
+      supabase.from('teams').select('id', { count: 'exact', head: true }).eq('sport_id', id),
+      supabase
+        .from('individual_registrations')
+        .select('id', { count: 'exact', head: true })
+        .eq('sport_id', id),
+      supabase.from('schedules').select('id', { count: 'exact', head: true }).eq('sport_id', id),
+    ]);
+
+  if (!sport) return { errors: { _: 'Ese deporte ya no existe.' } };
+
+  if ((teamCount ?? 0) > 0 || (individualCount ?? 0) > 0 || (scheduleCount ?? 0) > 0) {
+    return {
+      errors: {
+        _: 'No se puede eliminar: hay equipos, inscripciones o competencias asociadas a este deporte. Desactívalo en su lugar.',
+      },
+    };
+  }
+
+  const { error } = await supabase.from('sports').delete().eq('id', id);
+  if (error) return { errors: { _: friendlyError(error) } };
+
+  await supabase.rpc('log_audit', {
+    p_action: `Eliminó el deporte ${sport.name}`,
+    p_entity_type: 'sport',
+    p_entity_id: id,
+  });
+
+  revalidatePath('/admin/deportes');
+  revalidatePath('/panel/deportes');
+  return { ok: true, message: `Deporte "${sport.name}" eliminado.` };
 }
 
 export async function toggleSportAction(formData: FormData): Promise<void> {

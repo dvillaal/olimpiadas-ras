@@ -7,6 +7,7 @@ import type {
   PublicStanding,
 } from '@/types/database';
 import { formatCompetitionDate, shortTime } from '@/lib/domain/competitions';
+import { Checkbox } from '@/components/ui';
 
 /**
  * Explorador de resultados públicos.
@@ -152,8 +153,7 @@ export function ResultsExplorer({
 
         {tab === 'schedule' && (
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={onlyPublished}
               onChange={(e) => setOnlyPublished(e.target.checked)}
             />

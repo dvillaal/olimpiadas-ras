@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { saveSettingsAction } from '../actions';
 import type { ActionState } from '@/app/(auth)/actions';
 import type { Settings } from '@/types/database';
-import { Alert, Button, Field } from '@/components/ui';
+import { Alert, Button, Checkbox, Field } from '@/components/ui';
 import { useToast } from '@/components/toast';
 
 /** El input datetime-local necesita "YYYY-MM-DDTHH:mm" en hora local, sin zona. */
@@ -70,11 +70,10 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         </Field>
 
         <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-canvas p-4 text-sm">
-          <input
-            type="checkbox"
+          <Checkbox
             name="registrationOpen"
             defaultChecked={settings.registration_open}
-            className="mt-0.5 size-4 accent-scout-600"
+            className="mt-0.5"
           />
           <span>
             <b className="text-navy">Registro de grupos abierto</b>

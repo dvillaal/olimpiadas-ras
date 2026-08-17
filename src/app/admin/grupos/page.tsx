@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/utils';
 import { EmptyState, PageHeader, Panel, StatCard, StatusBadge } from '@/components/ui';
 import { CountryFlag } from '@/components/country-flag';
 import { GroupRowActions } from './group-row-actions';
+import { GroupForm } from './group-form';
 
 export const metadata: Metadata = { title: 'Grupos' };
 
@@ -71,90 +72,99 @@ export default async function AdminGroupsPage() {
         />
       </div>
 
-      <Panel title={`Listado (${rows.length})`}>
-        {rows.length === 0 ? (
-          <EmptyState
-            icon="🧭"
-            title="Todavía no hay grupos aprobados"
-            description="Aprueba solicitudes desde la bandeja de registro."
-          />
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Grupo</th>
-                  <th>País</th>
-                  <th>Responsable</th>
-                  <th className="text-right">Participantes</th>
-                  <th className="text-right">Pagado</th>
-                  <th>Estado</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((group) => (
-                  <tr key={group.id}>
-                    <td className="whitespace-nowrap font-mono text-xs font-bold">
-                      {group.code ?? '—'}
-                    </td>
-                    <td>
-                      <b className="text-navy">{group.name}</b>
-                      <br />
-                      <small className="text-slate-500">
-                        {[group.city, group.department].filter(Boolean).join(', ') || '—'}
-                      </small>
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {group.country_code ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <CountryFlag
-                            code={group.country_code}
-                            name={countryName.get(group.country_code) ?? group.country_code}
-                            size="sm"
-                          />
-                          {countryName.get(group.country_code) ?? group.country_code}
-                        </span>
-                      ) : (
-                        <span className="text-amber-700">Sin escoger</span>
-                      )}
-                    </td>
-                    <td>
-                      {group.leader_name}
-                      <br />
-                      <small className="break-all text-slate-500">{group.leader_email}</small>
-                      <br />
-                      <small className="text-slate-500">{group.leader_phone}</small>
-                    </td>
-                    <td className="text-right font-semibold">
-                      {participantsByGroup.get(group.id) ?? 0}
-                    </td>
-                    <td className="whitespace-nowrap text-right font-semibold text-scout-700">
-                      {formatCOP(paidByGroup.get(group.id) ?? 0)}
-                    </td>
-                    <td>
-                      <StatusBadge status={groupStatusView(group.status)} />
-                      <br />
-                      <small className="text-xs text-slate-400">
-                        desde {formatDate(group.reviewed_at)}
-                      </small>
-                    </td>
-                    <td>
-                      <GroupRowActions
-                        groupId={group.id}
-                        groupName={group.name}
-                        status={group.status}
-                        hasCountry={Boolean(group.country_code)}
-                      />
-                    </td>
+      <div className="grid gap-5 lg:grid-cols-[380px_minmax(0,1fr)]">
+        <Panel
+          title="Crear grupo"
+          description="El grupo queda aprobado de inmediato y las credenciales se envían por correo."
+        >
+          <GroupForm />
+        </Panel>
+
+        <Panel title={`Listado (${rows.length})`}>
+          {rows.length === 0 ? (
+            <EmptyState
+              icon="🧭"
+              title="Todavía no hay grupos aprobados"
+              description="Aprueba solicitudes desde la bandeja de registro o crea un grupo manualmente."
+            />
+          ) : (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Grupo</th>
+                    <th>País</th>
+                    <th>Responsable</th>
+                    <th className="text-right">Participantes</th>
+                    <th className="text-right">Pagado</th>
+                    <th>Estado</th>
+                    <th />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Panel>
+                </thead>
+                <tbody>
+                  {rows.map((group) => (
+                    <tr key={group.id}>
+                      <td className="whitespace-nowrap font-mono text-xs font-bold">
+                        {group.code ?? '—'}
+                      </td>
+                      <td>
+                        <b className="text-navy">{group.name}</b>
+                        <br />
+                        <small className="text-slate-500">
+                          {[group.city, group.department].filter(Boolean).join(', ') || '—'}
+                        </small>
+                      </td>
+                      <td className="whitespace-nowrap">
+                        {group.country_code ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <CountryFlag
+                              code={group.country_code}
+                              name={countryName.get(group.country_code) ?? group.country_code}
+                              size="sm"
+                            />
+                            {countryName.get(group.country_code) ?? group.country_code}
+                          </span>
+                        ) : (
+                          <span className="text-amber-700">Sin escoger</span>
+                        )}
+                      </td>
+                      <td>
+                        {group.leader_name}
+                        <br />
+                        <small className="break-all text-slate-500">{group.leader_email}</small>
+                        <br />
+                        <small className="text-slate-500">{group.leader_phone}</small>
+                      </td>
+                      <td className="text-right font-semibold">
+                        {participantsByGroup.get(group.id) ?? 0}
+                      </td>
+                      <td className="whitespace-nowrap text-right font-semibold text-scout-700">
+                        {formatCOP(paidByGroup.get(group.id) ?? 0)}
+                      </td>
+                      <td>
+                        <StatusBadge status={groupStatusView(group.status)} />
+                        <br />
+                        <small className="text-xs text-slate-400">
+                          desde {formatDate(group.reviewed_at)}
+                        </small>
+                      </td>
+                      <td>
+                        <GroupRowActions
+                          groupId={group.id}
+                          groupName={group.name}
+                          status={group.status}
+                          hasCountry={Boolean(group.country_code)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+      </div>
     </>
   );
 }

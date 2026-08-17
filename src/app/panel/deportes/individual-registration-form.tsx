@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { saveIndividualRegistrationAction } from '../actions';
 import type { ActionState } from '@/app/(auth)/actions';
-import { Alert, Button } from '@/components/ui';
+import { Alert, Button, Checkbox } from '@/components/ui';
 import { useToast } from '@/components/toast';
 import { formatCOP } from '@/lib/domain/fees';
 
@@ -88,11 +88,10 @@ export function IndividualRegistrationForm({
                 selected.includes(participant.id) ? 'bg-white/15' : 'hover:bg-white/5'
               }`}
             >
-              <input
-                type="checkbox"
+              <Checkbox
+                tone="dark"
                 checked={selected.includes(participant.id)}
                 onChange={() => toggle(participant.id)}
-                className="size-4 accent-white"
               />
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold text-white">

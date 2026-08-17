@@ -4,7 +4,7 @@ import { useActionState, useDeferredValue, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { claimCountryAction } from '../actions';
 import type { ActionState } from '@/app/(auth)/actions';
-import { Alert, Badge, Button } from '@/components/ui';
+import { Alert, Badge, Button, Checkbox } from '@/components/ui';
 import { CountryFlag } from '@/components/country-flag';
 import { useActionResult } from '@/lib/hooks/use-action-result';
 
@@ -105,11 +105,10 @@ export function CountryPicker({
                      focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/20"
         />
         <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-white">
-          <input
-            type="checkbox"
+          <Checkbox
+            tone="dark"
             checked={onlyAvailable}
             onChange={(event) => setOnlyAvailable(event.target.checked)}
-            className="size-4 accent-white"
           />
           Solo disponibles
         </label>

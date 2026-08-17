@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { saveSportAction } from '../actions';
 import type { ActionState } from '@/app/(auth)/actions';
 import type { Branch, Settings } from '@/types/database';
-import { Alert, Button, Field } from '@/components/ui';
+import { Alert, Button, Checkbox, Field } from '@/components/ui';
 import { useActionResult } from '@/lib/hooks/use-action-result';
 import { formatCOP } from '@/lib/domain/fees';
 
@@ -18,21 +18,51 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-function SubmitButton() {
+function SubmitButton({ editing }: { editing: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" block disabled={pending}>
-      {pending ? 'Guardando…' : 'Guardar deporte'}
+      {pending ? 'Guardando…' : editing ? 'Guardar cambios' : 'Guardar deporte'}
     </Button>
   );
 }
 
-export function SportForm({ branches, settings }: { branches: Branch[]; settings: Settings }) {
+export interface SportRow {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  type: 'group' | 'individual';
+  description: string;
+  category: string;
+  teamSize: number;
+  substitutes: number;
+  maxTeamsPerGroup: number;
+  maxSportsPerParticipant: number;
+  deadline: string | null;
+  fee: number | null;
+  allowIntergroup: boolean;
+  maxExternal: number;
+  branchIds: string[];
+}
+
+export function SportForm({
+  branches,
+  settings,
+  editing = null,
+  onCancelEdit,
+}: {
+  branches: Branch[];
+  settings: Settings;
+  editing?: SportRow | null;
+  onCancelEdit?: () => void;
+}) {
   const [state, formAction] = useActionState<ActionState, FormData>(saveSportAction, {});
-  const [type, setType] = useState<'group' | 'individual'>('group');
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugTouched, setSlugTouched] = useState(false);
+  const [type, setType] = useState<'group' | 'individual'>(editing?.type ?? 'group');
+  const [name, setName] = useState(editing?.name ?? '');
+  const [slug, setSlug] = useState(editing?.slug ?? '');
+  const [slugTouched, setSlugTouched] = useState(Boolean(editing));
+  const [selectedBranches, setSelectedBranches] = useState<string[]>(editing?.branchIds ?? []);
   const formRef = useRef<HTMLFormElement>(null);
 
   const isGroup = type === 'group';
@@ -44,20 +74,31 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
     setSlug('');
     setSlugTouched(false);
     setType('group');
+    setSelectedBranches([]);
+    onCancelEdit?.();
   });
 
   const errors = state.errors ?? {};
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-4" noValidate>
+    <form
+      ref={formRef}
+      action={formAction}
+      className="space-y-4"
+      noValidate
+      // Fuerza a React a recrear el formulario al cambiar de deporte, para que
+      // los `defaultValue` se refresquen.
+      key={editing?.id ?? 'nuevo'}
+    >
       {errors._ && <Alert tone="error">{errors._}</Alert>}
+      {editing && <input type="hidden" name="id" value={editing.id} />}
 
       <div className="grid gap-4 sm:grid-cols-[80px_minmax(0,1fr)]">
         <Field label="Icono" htmlFor="icon" error={errors.icon}>
           <input
             id="icon"
             name="icon"
-            defaultValue="🏅"
+            defaultValue={editing?.icon ?? '🏅'}
             maxLength={8}
             className="field-input text-center text-xl"
           />
@@ -82,7 +123,11 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
         label="Identificador"
         htmlFor="slug"
         error={errors.slug}
-        hint="Se usa en direcciones web. No lo cambies una vez publicado."
+        hint={
+          editing
+            ? 'Ya está publicado: si lo cambias, se recalculará el sufijo de rama.'
+            : 'Se usa en direcciones web. No lo cambies una vez publicado.'
+        }
         required
       >
         <input
@@ -112,15 +157,32 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
       </Field>
 
       <Field label="Descripción" htmlFor="description" error={errors.description}>
-        <textarea id="description" name="description" rows={2} className="field-input resize-y" />
+        <textarea
+          id="description"
+          name="description"
+          rows={2}
+          className="field-input resize-y"
+          defaultValue={editing?.description ?? ''}
+        />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Categoría" htmlFor="category" error={errors.category}>
-          <input id="category" name="category" defaultValue="Mixta" className="field-input" />
+          <input
+            id="category"
+            name="category"
+            defaultValue={editing?.category ?? 'Mixta'}
+            className="field-input"
+          />
         </Field>
         <Field label="Fecha de cierre" htmlFor="deadline" error={errors.deadline}>
-          <input id="deadline" name="deadline" type="date" className="field-input" />
+          <input
+            id="deadline"
+            name="deadline"
+            type="date"
+            className="field-input"
+            defaultValue={editing?.deadline ?? ''}
+          />
         </Field>
       </div>
 
@@ -134,7 +196,7 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
                 name="teamSize"
                 type="number"
                 min={1}
-                defaultValue={5}
+                defaultValue={editing?.teamSize ?? 5}
                 required
                 className="field-input"
               />
@@ -145,7 +207,7 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
                 name="substitutes"
                 type="number"
                 min={0}
-                defaultValue={2}
+                defaultValue={editing?.substitutes ?? 2}
                 required
                 className="field-input"
               />
@@ -153,12 +215,7 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
           </div>
 
           <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-navy">
-            <input
-              type="checkbox"
-              name="allowIntergroup"
-              defaultChecked
-              className="size-4 accent-scout-600"
-            />
+            <Checkbox name="allowIntergroup" defaultChecked={editing?.allowIntergroup ?? true} />
             Permite integrantes de otros grupos
           </label>
 
@@ -174,7 +231,7 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
               name="maxExternal"
               type="number"
               min={0}
-              defaultValue={2}
+              defaultValue={editing?.maxExternal ?? 2}
               required
               className="field-input"
             />
@@ -200,7 +257,7 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
             name="maxTeamsPerGroup"
             type="number"
             min={1}
-            defaultValue={isGroup ? 2 : 1}
+            defaultValue={editing?.maxTeamsPerGroup ?? (isGroup ? 2 : 1)}
             required
             className="field-input"
           />
@@ -216,7 +273,7 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
             name="maxSportsPerParticipant"
             type="number"
             min={1}
-            defaultValue={3}
+            defaultValue={editing?.maxSportsPerParticipant ?? 3}
             required
             className="field-input"
           />
@@ -236,27 +293,39 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
           min={0}
           className="field-input"
           placeholder={String(inheritedFee)}
+          defaultValue={editing?.fee != null ? String(editing.fee) : ''}
         />
       </Field>
 
       <fieldset>
         <legend className="field-label">
-          Ramas habilitadas
+          Ramas que compiten
           <span className="ml-0.5 text-red-600" aria-hidden>
             *
           </span>
         </legend>
+        <p className="mb-2 text-xs text-slate-500">
+          {editing
+            ? 'Esta rama ya está marcada porque es la del deporte que editas. Si marcas otra además, se crea un deporte nuevo para esa rama en vez de moverse.'
+            : 'Las ramas no compiten entre sí: por cada rama que marques se crea un deporte independiente (mismo nombre e ícono, pero inscripciones, calendario y resultados propios).'}
+        </p>
         <div className="grid gap-2 sm:grid-cols-2">
           {branches.map((branch) => (
             <label
               key={branch.id}
               className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-line p-2.5 text-sm"
             >
-              <input
-                type="checkbox"
+              <Checkbox
                 name="branchIds"
                 value={branch.id}
-                className="size-4 accent-scout-600"
+                checked={selectedBranches.includes(branch.id)}
+                onChange={() =>
+                  setSelectedBranches((current) =>
+                    current.includes(branch.id)
+                      ? current.filter((id) => id !== branch.id)
+                      : [...current, branch.id],
+                  )
+                }
               />
               {branch.name}
             </label>
@@ -270,7 +339,13 @@ export function SportForm({ branches, settings }: { branches: Branch[]; settings
         )}
       </fieldset>
 
-      <SubmitButton />
+      <SubmitButton editing={Boolean(editing)} />
+
+      {editing && (
+        <Button type="button" variant="secondary" block onClick={onCancelEdit}>
+          Cancelar edición
+        </Button>
+      )}
     </form>
   );
 }

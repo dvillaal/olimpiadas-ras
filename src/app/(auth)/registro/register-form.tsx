@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { registerGroupAction, type ActionState } from '../actions';
-import { Alert, Button, Field } from '@/components/ui';
+import { Alert, Button, Checkbox, Field } from '@/components/ui';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -129,12 +129,7 @@ export function RegisterForm() {
       </fieldset>
 
       <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-scout-50 p-4 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          name="acceptsTerms"
-          className="mt-0.5 size-4 shrink-0 accent-scout-600"
-          required
-        />
+        <Checkbox name="acceptsTerms" className="mt-0.5" required />
         <span>
           Autorizo el tratamiento de los datos personales del grupo y de sus participantes con el
           único fin de gestionar la inscripción y participación en el evento, conforme a la Ley 1581

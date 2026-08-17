@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { saveMatchResultAction, saveSessionResultAction } from '@/app/arbitraje/actions';
 import type { ActionState } from '@/app/(auth)/actions';
 import type { ResultOrder } from '@/types/database';
-import { Alert, Button, Field } from '@/components/ui';
+import { Alert, Button, Checkbox, Field } from '@/components/ui';
 import { useActionResult } from '@/lib/hooks/use-action-result';
 
 /**
@@ -191,8 +191,7 @@ export function SessionResultForm({
               />
 
               <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-                <input
-                  type="checkbox"
+                <Checkbox
                   name="disqualified"
                   value={row.participantId}
                   checked={isDq}

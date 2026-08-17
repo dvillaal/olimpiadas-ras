@@ -16,6 +16,7 @@
     "db:validate": "node scripts/validate-sql.mjs",
     "dev": "next dev",
     "lint": "eslint .",
+    "reset:testing:auth": "node scripts/reset-testing-auth.mjs",
     "seed:admin": "node scripts/seed-admin.mjs",
     "start": "next start",
     "test": "vitest run",

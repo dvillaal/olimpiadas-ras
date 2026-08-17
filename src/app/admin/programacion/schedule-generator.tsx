@@ -4,7 +4,7 @@ import { useActionState, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { generateScheduleAction } from './actions';
 import type { ActionState } from '@/app/(auth)/actions';
-import { Alert, Button, Field } from '@/components/ui';
+import { Alert, Button, Checkbox, Field } from '@/components/ui';
 import { useActionResult } from '@/lib/hooks/use-action-result';
 
 export interface SportOption {
@@ -154,7 +154,7 @@ export function ScheduleGenerator({
       </Field>
 
       <label className="flex items-start gap-2 text-sm">
-        <input type="checkbox" name="includePending" className="mt-1" />
+        <Checkbox name="includePending" className="mt-1" />
         <span>
           Incluir inscripciones que aún no están confirmadas.
           <span className="block text-xs text-slate-500">
