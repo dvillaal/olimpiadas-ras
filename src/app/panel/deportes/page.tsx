@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { requireGroup, getSettings } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { formatCOP, sportFee } from '@/lib/domain/fees';
-import { isSportOpen, remainingTeamSlots } from '@/lib/domain/eligibility';
+import { isSportOpen, remainingTeamSlots, teamDisplayName } from '@/lib/domain/eligibility';
 import { registrationStatusView } from '@/lib/domain/status';
 import { formatDate } from '@/lib/utils';
 import { Alert, Badge, LinkButton, StatusBadge } from '@/components/ui';
@@ -41,6 +41,10 @@ export default async function GroupSportsPage() {
     supabase.from('individual_registrations').select('*').eq('group_id', group.id),
     supabase.from('individual_registration_participants').select('*'),
   ]);
+
+  const { data: country } = group.country_code
+    ? await supabase.from('countries').select('name').eq('code', group.country_code).maybeSingle()
+    : { data: null };
 
   const branchesBySport = new Map<string, string[]>();
   for (const link of sportBranches ?? []) {
@@ -257,7 +261,13 @@ export default async function GroupSportsPage() {
                           branch: branchName.get(p.branch_id) ?? p.branch_id,
                           groupId: p.group_id,
                         }))}
-                        defaultName={`${group.name} · ${sport.name}`}
+                        defaultName={teamDisplayName(
+                          group.name,
+                          country?.name ?? null,
+                          branchName.get(allowedBranches[0] ?? '') ?? '',
+                          myTeams.filter((t) => t.status !== 'rejected' && t.status !== 'cancelled')
+                            .length,
+                        )}
                       />
                     </div>
                   )}

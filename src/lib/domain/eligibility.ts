@@ -174,3 +174,24 @@ export function remainingTeamSlots(sport: EligibilitySport, currentTeamCount: nu
 export function remainingStandSlots(standLimit: number, occupied: number): number {
   return Math.max(0, standLimit - occupied);
 }
+
+/**
+ * Nombre fijo de un equipo: Grupo · País · Rama. No lo escribe el jefe de
+ * grupo, se calcula siempre en el servidor a partir de datos que él no puede
+ * manipular (su grupo, el país que escogió y la rama del deporte).
+ *
+ * Un deporte solo tiene una rama desde que cada rama seleccionada al crear un
+ * deporte genera un registro independiente (ver `saveSportAction`). Si un
+ * grupo llega a tener más de un equipo en el mismo deporte —algunos deportes
+ * lo permiten vía `max_teams_per_group`— el nombre coincidiría exactamente
+ * entre ellos, así que `existingCount` sufija un número a partir del segundo.
+ */
+export function teamDisplayName(
+  groupName: string,
+  countryName: string | null,
+  branchName: string,
+  existingCount = 0,
+): string {
+  const base = [groupName, countryName, branchName].filter(Boolean).join(' · ');
+  return existingCount > 0 ? `${base} ${existingCount + 1}` : base;
+}

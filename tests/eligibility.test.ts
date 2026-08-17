@@ -6,6 +6,7 @@ import {
   participantEligibility,
   remainingStandSlots,
   remainingTeamSlots,
+  teamDisplayName,
   validateRoster,
   type EligibilityParticipant,
   type EligibilitySport,
@@ -167,5 +168,29 @@ describe('cupos', () => {
   it('nunca reporta cupos de stand negativos', () => {
     expect(remainingStandSlots(30, 10)).toBe(20);
     expect(remainingStandSlots(30, 35)).toBe(0);
+  });
+});
+
+describe('teamDisplayName', () => {
+  it('combina grupo, país y rama', () => {
+    expect(teamDisplayName('Grupo Scout 12', 'Colombia', 'Scouts')).toBe(
+      'Grupo Scout 12 · Colombia · Scouts',
+    );
+  });
+
+  it('omite el país cuando el grupo todavía no lo escogió', () => {
+    expect(teamDisplayName('Grupo Scout 12', null, 'Scouts')).toBe('Grupo Scout 12 · Scouts');
+  });
+
+  it('agrega un número a partir del segundo equipo en el mismo deporte', () => {
+    expect(teamDisplayName('Grupo Scout 12', 'Colombia', 'Scouts', 0)).toBe(
+      'Grupo Scout 12 · Colombia · Scouts',
+    );
+    expect(teamDisplayName('Grupo Scout 12', 'Colombia', 'Scouts', 1)).toBe(
+      'Grupo Scout 12 · Colombia · Scouts 2',
+    );
+    expect(teamDisplayName('Grupo Scout 12', 'Colombia', 'Scouts', 2)).toBe(
+      'Grupo Scout 12 · Colombia · Scouts 3',
+    );
   });
 });

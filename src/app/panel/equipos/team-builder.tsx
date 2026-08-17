@@ -153,24 +153,15 @@ export function TeamBuilder({
 
       {state.errors?._ && <Alert tone="error">{state.errors._}</Alert>}
 
-      <Field
-        label="Nombre del equipo"
-        htmlFor={`team-name-${sport.id}`}
-        error={state.errors?.name}
-        required
-        className="[&_.field-label]:text-white"
-      >
-        <input
-          id={`team-name-${sport.id}`}
-          name="name"
-          required
-          className="w-full rounded-xl border border-white/30 bg-white/10 px-3.5 py-2.5 text-[15px]
-                     text-white transition-colors placeholder:text-white/50
-                     focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/20"
-          defaultValue={initialName ?? defaultName}
-          maxLength={80}
-        />
-      </Field>
+      <div>
+        <span className="mb-1.5 block text-sm font-semibold text-white">Nombre del equipo</span>
+        <p className="rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 text-[15px] text-white/90">
+          {initialName ?? defaultName}
+        </p>
+        <p className="mt-1 text-xs text-white/60">
+          Se asigna con el grupo, el país y la rama; no se puede cambiar.
+        </p>
+      </div>
 
       <fieldset>
         <legend className="mb-1.5 block text-sm font-semibold text-white">

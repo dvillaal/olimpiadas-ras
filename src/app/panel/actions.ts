@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireGroup } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { teamDisplayName } from '@/lib/domain/eligibility';
 import {
   fieldErrors,
   intergroupProposalSchema,
@@ -58,7 +59,10 @@ export async function saveTeamAction(_prev: ActionState, formData: FormData): Pr
   const parsed = teamSchema.safeParse({
     id: formData.get('id') || undefined,
     sportId: formData.get('sportId'),
-    name: formData.get('name'),
+    // El nombre no lo escribe el grupo: se calcula más abajo. Se manda un
+    // valor fijo aquí solo para que la validación de longitud del schema no
+    // falle antes de tiempo.
+    name: 'pendiente',
     starters: formData.getAll('starters').map(String),
     substitutes: formData.getAll('substitutes').map(String),
     captainId: formData.get('captainId') ?? '',
@@ -75,19 +79,51 @@ export async function saveTeamAction(_prev: ActionState, formData: FormData): Pr
     return { errors: { starters: 'Una persona no puede ser titular y suplente al mismo tiempo.' } };
   }
 
-  const { data: team, error: teamError } = input.id
-    ? await supabase
+  let team: { id: string; name: string } | null = null;
+  let teamError: { code?: string; message: string } | null = null;
+
+  if (input.id) {
+    // Al editar, el nombre no cambia: ni la rama del deporte ni el país del
+    // grupo pueden variar después de creado (`sportId` es fijo en el
+    // formulario de edición), así que no hay nada que recalcular.
+    const result = await supabase
+      .from('teams')
+      .update({})
+      .eq('id', input.id)
+      .eq('owner_group_id', group.id)
+      .select('id, name')
+      .single();
+    team = result.data;
+    teamError = result.error;
+  } else {
+    // Nombre fijo: Grupo · País · Rama, calculado con datos que el grupo no
+    // puede manipular desde el formulario.
+    const [{ data: country }, { data: sportBranch }, { count: existingCount }] = await Promise.all([
+      group.country_code
+        ? supabase.from('countries').select('name').eq('code', group.country_code).maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase.from('sport_branches').select('branch_id').eq('sport_id', input.sportId).maybeSingle(),
+      supabase
         .from('teams')
-        .update({ name: input.name })
-        .eq('id', input.id)
+        .select('id', { count: 'exact', head: true })
         .eq('owner_group_id', group.id)
-        .select('id')
-        .single()
-    : await supabase
-        .from('teams')
-        .insert({ owner_group_id: group.id, sport_id: input.sportId, name: input.name })
-        .select('id')
-        .single();
+        .eq('sport_id', input.sportId),
+    ]);
+
+    const { data: branch } = sportBranch
+      ? await supabase.from('branches').select('name').eq('id', sportBranch.branch_id).maybeSingle()
+      : { data: null };
+
+    const name = teamDisplayName(group.name, country?.name ?? null, branch?.name ?? '', existingCount ?? 0);
+
+    const result = await supabase
+      .from('teams')
+      .insert({ owner_group_id: group.id, sport_id: input.sportId, name })
+      .select('id, name')
+      .single();
+    team = result.data;
+    teamError = result.error;
+  }
 
   if (teamError || !team) {
     return { errors: { _: friendlyError(teamError ?? { message: 'Error al guardar el equipo.' }) } };
@@ -135,7 +171,7 @@ export async function saveTeamAction(_prev: ActionState, formData: FormData): Pr
 
   revalidatePath('/panel/equipos');
   revalidatePath('/panel/deportes');
-  return { ok: true, message: `Equipo "${input.name}" guardado.` };
+  return { ok: true, message: `Equipo "${team.name}" guardado.` };
 }
 
 export async function deleteTeamAction(formData: FormData): Promise<void> {
