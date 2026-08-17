@@ -1,17 +1,26 @@
 'use client';
 
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Badge, Checkbox, EmptyState } from '@/components/ui';
+import { Badge, Button, Checkbox, EmptyState } from '@/components/ui';
+import type { ParticipantEditing } from './participant-form';
 
 export interface ParticipantRow {
   id: string;
   fullName: string;
   document: string;
+  documentFull: string;
   docType: string;
   age: number;
   branch: string;
+  branchId: string;
+  groupId: string;
   groupName: string;
   groupCode: string;
+  firstNames: string;
+  lastNames: string;
+  birthdate: string;
+  gender: string;
+  notes: string;
   active: boolean;
   hasRegistrations: boolean;
 }
@@ -28,7 +37,13 @@ function normalize(value: string): string {
  * que ir al servidor en cada tecla; si el evento creciera mucho, convendría
  * paginar del lado de Postgres.
  */
-export function ParticipantSearch({ participants }: { participants: ParticipantRow[] }) {
+export function ParticipantSearch({
+  participants,
+  onEdit,
+}: {
+  participants: ParticipantRow[];
+  onEdit: (editing: ParticipantEditing) => void;
+}) {
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState('');
   const [onlyActive, setOnlyActive] = useState(false);
@@ -103,6 +118,7 @@ export function ParticipantSearch({ participants }: { participants: ParticipantR
                 <th className="text-right">Edad</th>
                 <th>Documento</th>
                 <th>Estado</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -128,6 +144,30 @@ export function ParticipantSearch({ participants }: { participants: ParticipantR
                         Inscrito
                       </Badge>
                     )}
+                  </td>
+                  <td>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        onEdit({
+                          id: p.id,
+                          groupId: p.groupId,
+                          firstNames: p.firstNames,
+                          lastNames: p.lastNames,
+                          docType: p.docType,
+                          document: p.documentFull,
+                          birthdate: p.birthdate,
+                          branchId: p.branchId,
+                          gender: p.gender,
+                          active: p.active,
+                          notes: p.notes,
+                        })
+                      }
+                    >
+                      Editar
+                    </Button>
                   </td>
                 </tr>
               ))}

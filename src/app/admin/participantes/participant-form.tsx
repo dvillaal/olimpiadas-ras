@@ -1,49 +1,78 @@
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
+import { useActionState, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 import { saveParticipantAction } from '../actions';
 import type { ActionState } from '@/app/(auth)/actions';
 import type { Branch } from '@/types/database';
-import { Alert, Button, Field } from '@/components/ui';
-import { useToast } from '@/components/toast';
+import { Alert, Button, Checkbox, Field } from '@/components/ui';
+import { useActionResult } from '@/lib/hooks/use-action-result';
 
-function SubmitButton() {
+function SubmitButton({ editing }: { editing: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" block disabled={pending}>
-      {pending ? 'Guardando…' : 'Registrar participante'}
+      {pending ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar participante'}
     </Button>
   );
+}
+
+export interface ParticipantEditing {
+  id: string;
+  groupId: string;
+  firstNames: string;
+  lastNames: string;
+  docType: string;
+  document: string;
+  birthdate: string;
+  branchId: string;
+  gender: string;
+  active: boolean;
+  notes: string;
 }
 
 export function ParticipantForm({
   groups,
   branches,
+  editing = null,
+  onCancelEdit,
 }: {
   groups: { id: string; code: string | null; name: string }[];
   branches: Branch[];
+  editing?: ParticipantEditing | null;
+  onCancelEdit?: () => void;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(saveParticipantAction, {});
   const formRef = useRef<HTMLFormElement>(null);
-  const toast = useToast();
 
-  useEffect(() => {
-    if (state.ok && state.message) {
-      toast.success(state.message);
-      formRef.current?.reset();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.ok, state.message]);
+  useActionResult(state, () => {
+    formRef.current?.reset();
+    onCancelEdit?.();
+  });
 
   const errors = state.errors ?? {};
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-4" noValidate>
+    <form
+      ref={formRef}
+      action={formAction}
+      className="space-y-4"
+      noValidate
+      // Fuerza a React a recrear el formulario al cambiar de participante,
+      // para que los `defaultValue` se refresquen.
+      key={editing?.id ?? 'nuevo'}
+    >
       {errors._ && <Alert tone="error">{errors._}</Alert>}
+      {editing && <input type="hidden" name="id" value={editing.id} />}
 
       <Field label="Grupo" htmlFor="groupId" error={errors.groupId} required>
-        <select id="groupId" name="groupId" required className="field-input" defaultValue="">
+        <select
+          id="groupId"
+          name="groupId"
+          required
+          className="field-input"
+          defaultValue={editing?.groupId ?? ''}
+        >
           <option value="" disabled>
             Selecciona un grupo…
           </option>
@@ -58,16 +87,33 @@ export function ParticipantForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombres" htmlFor="firstNames" error={errors.firstNames} required>
-          <input id="firstNames" name="firstNames" required className="field-input" />
+          <input
+            id="firstNames"
+            name="firstNames"
+            required
+            className="field-input"
+            defaultValue={editing?.firstNames ?? ''}
+          />
         </Field>
         <Field label="Apellidos" htmlFor="lastNames" error={errors.lastNames} required>
-          <input id="lastNames" name="lastNames" required className="field-input" />
+          <input
+            id="lastNames"
+            name="lastNames"
+            required
+            className="field-input"
+            defaultValue={editing?.lastNames ?? ''}
+          />
         </Field>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-[110px_minmax(0,1fr)]">
         <Field label="Tipo doc." htmlFor="docType" error={errors.docType} required>
-          <select id="docType" name="docType" className="field-input" defaultValue="TI">
+          <select
+            id="docType"
+            name="docType"
+            className="field-input"
+            defaultValue={editing?.docType ?? 'TI'}
+          >
             {['RC', 'TI', 'CC', 'CE', 'PA', 'PEP'].map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -76,16 +122,36 @@ export function ParticipantForm({
           </select>
         </Field>
         <Field label="Número de documento" htmlFor="document" error={errors.document} required>
-          <input id="document" name="document" required className="field-input" inputMode="numeric" />
+          <input
+            id="document"
+            name="document"
+            required
+            className="field-input"
+            inputMode="numeric"
+            defaultValue={editing?.document ?? ''}
+          />
         </Field>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Fecha de nacimiento" htmlFor="birthdate" error={errors.birthdate} required>
-          <input id="birthdate" name="birthdate" type="date" required className="field-input" />
+          <input
+            id="birthdate"
+            name="birthdate"
+            type="date"
+            required
+            className="field-input"
+            defaultValue={editing?.birthdate ?? ''}
+          />
         </Field>
         <Field label="Rama" htmlFor="branchId" error={errors.branchId} required>
-          <select id="branchId" name="branchId" required className="field-input" defaultValue="">
+          <select
+            id="branchId"
+            name="branchId"
+            required
+            className="field-input"
+            defaultValue={editing?.branchId ?? ''}
+          >
             <option value="" disabled>
               Selecciona…
             </option>
@@ -99,7 +165,12 @@ export function ParticipantForm({
       </div>
 
       <Field label="Género" htmlFor="gender" error={errors.gender} className="sm:w-[130px]">
-        <select id="gender" name="gender" className="field-input" defaultValue="">
+        <select
+          id="gender"
+          name="gender"
+          className="field-input"
+          defaultValue={editing?.gender ?? ''}
+        >
           <option value="">—</option>
           <option value="F">F</option>
           <option value="M">M</option>
@@ -107,16 +178,40 @@ export function ParticipantForm({
         </select>
       </Field>
 
+      {editing && (
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-navy">
+          {/*
+            Un checkbox sin marcar no se envía. Sin este campo espejo, marcar a
+            alguien como inactivo no tendría efecto en el envío del formulario.
+          */}
+          <input type="hidden" name="active" value="false" />
+          <Checkbox name="active" value="true" defaultChecked={editing.active} />
+          Participante activo
+        </label>
+      )}
+
       <Field
         label="Observaciones"
         htmlFor="notes"
         error={errors.notes}
         hint="Alergias, dieta, condiciones médicas relevantes."
       >
-        <textarea id="notes" name="notes" rows={2} className="field-input resize-y" />
+        <textarea
+          id="notes"
+          name="notes"
+          rows={2}
+          className="field-input resize-y"
+          defaultValue={editing?.notes ?? ''}
+        />
       </Field>
 
-      <SubmitButton />
+      <SubmitButton editing={Boolean(editing)} />
+
+      {editing && (
+        <Button type="button" variant="secondary" block onClick={onCancelEdit}>
+          Cancelar edición
+        </Button>
+      )}
     </form>
   );
 }

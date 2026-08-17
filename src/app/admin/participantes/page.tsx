@@ -3,10 +3,9 @@ import { requireAdmin } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { ageAt } from '@/lib/domain/eligibility';
 import { maskDocument } from '@/lib/utils';
-import { Badge, EmptyState, PageHeader, Panel, StatCard } from '@/components/ui';
-import { ParticipantImporter } from '@/components/participant-importer';
-import { ParticipantForm } from './participant-form';
-import { ParticipantSearch } from './participant-search';
+import { PageHeader, StatCard } from '@/components/ui';
+import { ParticipantManager } from './participant-manager';
+import type { ParticipantRow } from './participant-search';
 
 export const metadata: Metadata = { title: 'Participantes' };
 
@@ -29,6 +28,27 @@ export default async function AdminParticipantsPage() {
   const inTeams = new Set((teamMembers ?? []).map((m) => m.participant_id));
   const active = rows.filter((p) => p.active);
 
+  const participantRows: ParticipantRow[] = rows.map((participant) => ({
+    id: participant.id,
+    fullName: participant.full_name,
+    document: maskDocument(participant.document),
+    documentFull: participant.document,
+    docType: participant.doc_type,
+    age: ageAt(participant.birthdate),
+    branch: branchName.get(participant.branch_id) ?? participant.branch_id,
+    branchId: participant.branch_id,
+    groupId: participant.group_id,
+    groupName: groupById.get(participant.group_id)?.name ?? '—',
+    groupCode: groupById.get(participant.group_id)?.code ?? '',
+    firstNames: participant.first_names,
+    lastNames: participant.last_names,
+    birthdate: participant.birthdate,
+    gender: participant.gender ?? '',
+    notes: participant.notes,
+    active: participant.active,
+    hasRegistrations: inTeams.has(participant.id),
+  }));
+
   return (
     <>
       <PageHeader
@@ -42,57 +62,11 @@ export default async function AdminParticipantsPage() {
         <StatCard icon="🏅" value={inTeams.size} label="Con al menos una inscripción" />
       </div>
 
-      <div className="mb-6 grid gap-5 xl:grid-cols-2">
-        <Panel
-          title="Registrar participante"
-          description="Para cargas grandes usa la importación."
-        >
-          <ParticipantForm groups={groups ?? []} branches={branches ?? []} />
-        </Panel>
-
-        <Panel
-          title="Importar desde Excel o CSV"
-          description="El archivo se valida fila por fila antes de guardar nada."
-        >
-          <ParticipantImporter
-            scope="admin"
-            groupCodes={(groups ?? [])
-              .filter((g) => g.code)
-              .map((g) => ({ code: g.code as string, name: g.name }))}
-            branchIds={(branches ?? []).map((b) => b.id)}
-          />
-        </Panel>
-      </div>
-
-      <Panel title={`Listado (${rows.length})`}>
-        {rows.length === 0 ? (
-          <EmptyState
-            icon="👥"
-            title="Todavía no hay participantes"
-            description="Regístralos uno a uno o importa la plantilla diligenciada."
-          />
-        ) : (
-          <ParticipantSearch
-            participants={rows.map((participant) => ({
-              id: participant.id,
-              fullName: participant.full_name,
-              document: maskDocument(participant.document),
-              docType: participant.doc_type,
-              age: ageAt(participant.birthdate),
-              branch: branchName.get(participant.branch_id) ?? participant.branch_id,
-              groupName: groupById.get(participant.group_id)?.name ?? '—',
-              groupCode: groupById.get(participant.group_id)?.code ?? '',
-              active: participant.active,
-              hasRegistrations: inTeams.has(participant.id),
-            }))}
-          />
-        )}
-      </Panel>
-
-      <p className="mt-4 text-sm text-slate-500">
-        <Badge tone="gray">Nota</Badge> Los documentos se muestran enmascarados. Solo se guardan
-        completos en la base de datos, protegidos por las políticas de acceso.
-      </p>
+      <ParticipantManager
+        participants={participantRows}
+        groups={groups ?? []}
+        branches={branches ?? []}
+      />
     </>
   );
 }

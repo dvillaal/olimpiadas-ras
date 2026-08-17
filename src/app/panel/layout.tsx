@@ -32,6 +32,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     { href: '/panel', icon: '🏠', label: 'Inicio', badge: unreadNotifications ?? 0 },
     { href: '/panel/pais', icon: '🌍', label: 'Escoger país' },
     { href: '/panel/deportes', icon: '🏅', label: 'Deportes' },
+    { href: '/panel/participantes', icon: '👥', label: 'Participantes' },
     { href: '/panel/equipos', icon: '🤝', label: 'Mis equipos' },
     { href: '/panel/solicitudes', icon: '🔄', label: 'Intergrupales', badge: pendingRequests ?? 0 },
     { href: '/panel/programacion', icon: '🗓️', label: 'Mi programación' },
