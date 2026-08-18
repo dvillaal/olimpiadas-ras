@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { requireGroup, getSettings } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { formatCOP, sportFee } from '@/lib/domain/fees';
@@ -6,7 +7,7 @@ import { registrationStatusView } from '@/lib/domain/status';
 import { isEditableRegistration } from '@/lib/domain/fees';
 import { Alert, Badge, Button, LinkButton, StatusBadge } from '@/components/ui';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
-import { cardTitleClass } from '@/lib/fonts';
+import { cardTitleClass, titleFontClass } from '@/lib/fonts';
 import { deleteTeamAction } from '../actions';
 import { EditTeamToggle } from './edit-team-toggle';
 
@@ -87,21 +88,41 @@ export default async function GroupTeamsPage() {
     <div className="min-w-0 space-y-5">
       <RealtimeRefresher groupId={group.id} tables={['teams', 'intergroup_requests']} announce={false} />
 
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-plum px-6 py-5 text-white sm:px-8 sm:py-6">
-        <div>
-          <h1 className={cardTitleClass}>Mis equipos</h1>
-          <p className="mt-1 text-sm text-white/75">
-            Revisa las alineaciones y completa las que estén incompletas.
+      <section className="grid grid-cols-1 items-stretch gap-3 rounded-3xl bg-[#c49551] p-3 text-navy sm:grid-cols-3 sm:px-4 pb-4 pt-8">
+        <div className="relative h-40 sm:h-auto">
+          <Image
+            src="/home/goles-puntos-sets.png"
+            alt="¡Goles, puntos, sets!"
+            fill
+            className="object-contain object-center"
+          />
+        </div>
+
+        <div className="flex min-w-0 flex-col items-center justify-center gap-2 py-1 text-center">
+          <h1 className={`${cardTitleClass} !text-3xl sm:!text-4xl`}>Mis equipos</h1>
+          <p className="text-justify text-sm text-navy/75">
+            En esta sección aparecen los equipos que conformaste. Si requieres completarlos con
+            integrantes de otros grupos, ve a la sección Intergrupales.
+          </p>
+          <LinkButton
+            href="/panel/deportes"
+            variant="secondary"
+            size="sm"
+            className="!border-navy/30 !bg-navy/10 !text-navy hover:!bg-navy/20"
+          >
+            + Crear equipo
+          </LinkButton>
+        </div>
+
+        <div className="flex flex-col justify-center rounded-2xl bg-plum px-4 py-3 text-center text-white">
+          <p className={`${titleFontClass} text-3xl font-black uppercase leading-none sm:text-4xl`}>
+            ¡Pilas!
+          </p>
+          <p className="mt-1.5 text-justify text-xs leading-snug text-white/80">
+            Debes pagar los equipos y las inscripciones a deportes individuales desde la sección
+            «Pagos» para que queden correctamente inscritos.
           </p>
         </div>
-        <LinkButton
-          href="/panel/deportes"
-          variant="secondary"
-          size="sm"
-          className="!border-white/40 !bg-white/10 !text-white hover:!bg-white/20"
-        >
-          + Crear equipo
-        </LinkButton>
       </section>
 
       {rows.length === 0 ? (

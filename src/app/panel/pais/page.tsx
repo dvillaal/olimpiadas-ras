@@ -30,8 +30,8 @@ export default async function GroupCountryPage() {
       {/* Si otro grupo escoge un país mientras miras, la lista se actualiza sola. */}
       <RealtimeRefresher tables={['groups', 'countries']} announce={false} />
 
-      <section className="grid grid-cols-1 items-stretch gap-3 overflow-hidden rounded-3xl bg-[#f3c116] p-3 text-navy sm:grid-cols-3 sm:p-4">
-        <div className="relative -m-3 h-48 overflow-hidden rounded-t-3xl sm:-m-4 sm:h-auto sm:rounded-l-3xl sm:rounded-tr-none">
+      <section className="grid grid-cols-1 items-stretch gap-3 rounded-3xl bg-[#f3c116] p-3 text-navy sm:grid-cols-3 sm:px-4 pb-4 pt-8">
+        <div className="relative h-40 sm:h-auto">
           <Image src="/home/jaque-mate.png" alt="¡Jaque mate!" fill className="object-contain object-center" />
         </div>
 
