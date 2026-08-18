@@ -84,13 +84,18 @@ export function LinkButton({
 
 // ─── Insignias de estado ─────────────────────────────────────────────────────
 
+/*
+ * Insignias en color sólido con la paleta oficial de marca, para que
+ * combinen tanto sobre fondos claros (tablas del admin) como sobre las
+ * tarjetas de color del panel del jefe de grupo.
+ */
 const TONES: Record<BadgeTone, string> = {
-  green: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
-  blue: 'bg-sky-50 text-sky-800 ring-sky-200',
-  yellow: 'bg-amber-50 text-amber-800 ring-amber-200',
-  orange: 'bg-orange-50 text-orange-800 ring-orange-200',
-  red: 'bg-red-50 text-red-800 ring-red-200',
-  gray: 'bg-slate-100 text-slate-700 ring-slate-200',
+  green: 'bg-scout-600 text-white ring-scout-700',
+  blue: 'bg-navy text-white ring-navy',
+  yellow: 'bg-gold text-navy ring-gold',
+  orange: 'bg-brand-orange text-white ring-brand-orange',
+  red: 'bg-red-700 text-white ring-red-800',
+  gray: 'bg-slate-500 text-white ring-slate-600',
 };
 
 export function Badge({

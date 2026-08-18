@@ -16,9 +16,20 @@ function Inner({ tone }: { tone: 'light' | 'dark' }) {
                      : 'text-white/75 hover:bg-white/10 hover:text-white'
                  }`}
     >
-      <span aria-hidden className="w-5 text-center text-base">
-        ⏻
-      </span>
+      <svg
+        aria-hidden
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="size-5 shrink-0"
+      >
+        <path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3" />
+        <path d="M16 17l5-5-5-5" />
+        <path d="M21 12H9" />
+      </svg>
       {pending ? 'Saliendo…' : 'Cerrar sesión'}
     </button>
   );
