@@ -1,34 +1,43 @@
 @import 'tailwindcss';
 
 /*
- * Identidad visual heredada del prototipo: verde scout, dorado y azul marino.
- * Se declara como tema de Tailwind v4 para poder usar `bg-scout-600`,
- * `text-navy`, etc. en cualquier componente.
+ * Identidad visual oficial de la organización: verde, morado oscuro, lila,
+ * amarillo/dorado, naranja y un verde azulado muy oscuro (navy). Se declara
+ * como tema de Tailwind v4 para poder usar `bg-scout-600`, `text-navy`, etc.
+ * en cualquier componente. Escala verde (scout-50..900) generada a partir del
+ * verde oficial #15b680 (scout-500), conservando la progresión de luz previa.
  */
 @theme {
-  --color-scout-50: #eaf7ef;
-  --color-scout-100: #d3ecdd;
-  --color-scout-200: #a8d9bc;
-  --color-scout-300: #74c096;
-  --color-scout-400: #3fa070;
-  --color-scout-500: #1a8354;
-  --color-scout-600: #126b43;
-  --color-scout-700: #0b5032;
-  --color-scout-800: #123e2e;
-  --color-scout-900: #0a2a1f;
+  --color-scout-50: #e8fcf6;
+  --color-scout-100: #d1faec;
+  --color-scout-200: #a4f4d9;
+  --color-scout-300: #5fedbd;
+  --color-scout-400: #19db9a;
+  --color-scout-500: #15b680;
+  --color-scout-600: #129b6d;
+  --color-scout-700: #0f7f59;
+  --color-scout-800: #0c6849;
+  --color-scout-900: #095139;
 
-  --color-navy: #18344f;
-  --color-gold: #f5be4a;
+  --color-navy: #184349;
+  --color-gold: #f3c116;
   --color-ink: #1f2937;
 
   --color-line: #dbe5df;
   --color-canvas: #f3f7f4;
 
-  /* Insignia morada de la portada de acceso (logos Scouts de Colombia / Antioquia Scout). */
-  --color-plum: #4a2a78;
-  /* Morado claro y su análogo verde: tarjetas internas sobre fondos de color en el panel del grupo. */
-  --color-lilac: #8d5da3;
-  --color-jade: #36a592;
+  /* Naranja oficial de marca, disponible para acentos puntuales. */
+  --color-brand-orange: #f0592c;
+
+  /* plum y jade se unifican con los colores oficiales de marca (sidebar/scout)
+     para no mantener tonos "extra" fuera de la paleta de la organización. */
+  --color-plum: #5d3389;
+  --color-lilac: #9a7fde;
+  --color-jade: #15b680;
+
+  /* Barra lateral del panel del jefe de grupo: fondo morado oscuro y botones lilas. */
+  --color-sidebar: #5d3389;
+  --color-sidebar-button: #9a7fde;
 
   --radius-card: 18px;
   --shadow-card: 0 4px 15px rgba(24, 52, 79, 0.05);

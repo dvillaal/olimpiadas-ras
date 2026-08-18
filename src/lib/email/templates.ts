@@ -9,8 +9,8 @@ import type { EmailTemplate } from './send';
  */
 
 const BRAND = {
-  green: '#126b43',
-  navy: '#18344f',
+  green: '#15b680',
+  navy: '#184349',
   gray: '#64748b',
   bg: '#f3f7f4',
 };

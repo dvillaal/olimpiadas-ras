@@ -29,16 +29,16 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   ]);
 
   const nav: NavItem[] = [
-    { href: '/panel', icon: '🏠', label: 'Inicio', badge: unreadNotifications ?? 0 },
-    { href: '/panel/pais', icon: '🌍', label: 'Escoger país' },
-    { href: '/panel/deportes', icon: '🏅', label: 'Deportes' },
-    { href: '/panel/participantes', icon: '👥', label: 'Participantes' },
-    { href: '/panel/equipos', icon: '🤝', label: 'Mis equipos' },
-    { href: '/panel/solicitudes', icon: '🔄', label: 'Intergrupales', badge: pendingRequests ?? 0 },
-    { href: '/panel/programacion', icon: '🗓️', label: 'Mi programación' },
-    { href: '/panel/pagos', icon: '💳', label: 'Pagos' },
-    { href: '/panel/stand', icon: '🛍️', label: 'Mi stand' },
-    { href: '/panel/resumen', icon: '✅', label: 'Resumen' },
+    { href: '/panel', icon: '', label: 'Inicio', badge: unreadNotifications ?? 0 },
+    { href: '/panel/pais', icon: '', label: 'Países' },
+    { href: '/panel/deportes', icon: '', label: 'Deportes' },
+    { href: '/panel/participantes', icon: '', label: 'Mis participantes' },
+    { href: '/panel/equipos', icon: '', label: 'Mis equipos' },
+    { href: '/panel/solicitudes', icon: '', label: 'Intergrupales', badge: pendingRequests ?? 0 },
+    { href: '/panel/programacion', icon: '', label: 'Programación' },
+    { href: '/panel/pagos', icon: '', label: 'Pagos' },
+    { href: '/panel/stand', icon: '', label: 'Mi stand' },
+    { href: '/panel/resumen', icon: '', label: 'Resumen' },
   ];
 
   return (
@@ -48,7 +48,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       userName={context.group.name}
       userRole={context.profile.full_name || 'Responsable'}
       nav={nav}
-      logout={<LogoutButton tone="dark" />}
+      logout={<LogoutButton tone="light" />}
       sidebarTone="gold"
     >
       <RealtimeRefresher
