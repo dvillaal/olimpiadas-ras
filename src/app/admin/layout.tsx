@@ -65,7 +65,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       eventName={settings.event_name}
       subtitle="Administración"
       userName={context.profile.full_name || 'Administrador'}
-      userRole="Administrador general"
+      userRole={context.isFullAdmin ? 'Administrador general' : 'Administrador'}
       nav={nav}
       logout={<LogoutButton />}
     >

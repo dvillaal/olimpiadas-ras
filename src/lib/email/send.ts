@@ -19,6 +19,7 @@ export type EmailTemplate =
   | 'pago_correccion'
   | 'admin_nueva_solicitud'
   | 'arbitro_alta'
+  | 'admin_alta'
   | 'alianza_revisada';
 
 export interface SendEmailInput {

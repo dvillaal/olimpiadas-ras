@@ -16,6 +16,8 @@ export interface SessionContext {
   profile: Profile;
   group: Group | null;
   isAdmin: boolean;
+  /** Solo true si isAdmin y además admin_scope='full'. Ve bitácora/correos y puede crear otros admins. */
+  isFullAdmin: boolean;
   isReferee: boolean;
 }
 
@@ -54,6 +56,7 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
     profile,
     group,
     isAdmin: profile.role === 'admin',
+    isFullAdmin: profile.role === 'admin' && profile.admin_scope === 'full',
     isReferee: profile.role === 'referee',
   };
 });
@@ -75,6 +78,17 @@ export async function requireAdmin(): Promise<SessionContext> {
   if (!context) redirect('/ingresar');
   if (!context.isAdmin) redirect(homeForRole(context.profile.role));
   if (context.profile.must_change_password) redirect('/cambiar-clave');
+  return context;
+}
+
+/**
+ * Exige sesión de administrador con alcance completo ('full'). Un admin
+ * 'limited' cae aquí como si no fuera admin: no ve bitácora/correos ni puede
+ * dar de alta otros administradores.
+ */
+export async function requireFullAdmin(): Promise<SessionContext> {
+  const context = await requireAdmin();
+  if (!context.isFullAdmin) redirect('/admin');
   return context;
 }
 

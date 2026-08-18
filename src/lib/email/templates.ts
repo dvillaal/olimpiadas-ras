@@ -358,6 +358,63 @@ En "Mis competencias" verás lo que te asignaron. Ahí registras el resultado y 
   };
 }
 
+// ─── Alta de administrador ───────────────────────────────────────────────────
+
+export function adminWelcomeEmail(input: {
+  eventName: string;
+  adminName: string;
+  email: string;
+  password: string;
+  loginUrl: string;
+  scope: 'full' | 'limited';
+}): RenderedEmail {
+  const scopeNote =
+    input.scope === 'full'
+      ? 'Tienes acceso completo al panel administrativo, incluida la bitácora de actividad.'
+      : 'Tienes acceso al panel administrativo, salvo a la bitácora de actividad y al alta de otros administradores.';
+
+  return {
+    template: 'admin_alta',
+    subject: `Acceso de administrador · ${input.eventName}`,
+    html: layout({
+      title: 'Bienvenido al equipo administrador',
+      eventName: input.eventName,
+      cta: { label: 'Ingresar al sistema', url: input.loginUrl },
+      body: `
+        <p>Hola ${escapeHtml(input.adminName)},</p>
+        <p>La organización te registró como administrador de <b>${escapeHtml(input.eventName)}</b>.</p>
+        <p>Estos son tus datos de acceso:</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+               style="background:${BRAND.bg};border-radius:12px;margin:8px 0 4px">
+          <tr><td style="padding:16px 18px">
+            <div style="color:${BRAND.gray};font-size:12px;text-transform:uppercase;letter-spacing:.1em">Usuario</div>
+            <div style="font-weight:700;font-size:16px;margin-bottom:12px">${escapeHtml(input.email)}</div>
+            <div style="color:${BRAND.gray};font-size:12px;text-transform:uppercase;letter-spacing:.1em">Contraseña temporal</div>
+            <div style="font-weight:700;font-size:20px;font-family:ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:.05em">${escapeHtml(input.password)}</div>
+          </td></tr>
+        </table>
+        <p style="background:#fff4e0;border-left:3px solid #a86508;padding:12px 14px;border-radius:8px;color:#7a4a06">
+          <b>Cambia esta contraseña en tu primer ingreso.</b> El sistema te lo pedirá
+          automáticamente. No compartas este correo con nadie.
+        </p>
+        <p>${escapeHtml(scopeNote)}</p>`,
+    }),
+    text: `Hola ${input.adminName},
+
+La organización te registró como administrador de ${input.eventName}.
+
+Datos de acceso:
+  Usuario: ${input.email}
+  Contraseña temporal: ${input.password}
+
+IMPORTANTE: cambia esta contraseña en tu primer ingreso. No compartas este correo con nadie.
+
+Ingresa en: ${input.loginUrl}
+
+${scopeNote}`,
+  };
+}
+
 // ─── Alianza intergrupal revisada ────────────────────────────────────────────
 
 export function intergroupReviewedEmail(input: {

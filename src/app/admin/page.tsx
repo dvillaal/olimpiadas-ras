@@ -10,34 +10,30 @@ import { RealtimeRefresher } from '@/components/realtime-refresher';
 export const metadata: Metadata = { title: 'Inicio' };
 
 export default async function AdminDashboardPage() {
-  await requireAdmin();
+  const context = await requireAdmin();
   const settings = await getSettings();
   const supabase = await createClient();
 
-  const [
-    groups,
-    participants,
-    teams,
-    individuals,
-    stands,
-    approvedPayments,
-    pendingPayments,
-    audit,
-  ] = await Promise.all([
-    supabase.from('groups').select('id, name, code, status, country_code, created_at'),
-    supabase.from('participants').select('id', { count: 'exact', head: true }).eq('active', true),
-    supabase.from('teams').select('id, status'),
-    supabase.from('individual_registrations').select('id, status'),
-    supabase.from('stands').select('id, status'),
-    supabase.from('payments').select('reported_amount').eq('status', 'approved'),
-    supabase
-      .from('payments')
-      .select('id, concept, reference, expected_amount, created_at, group_id, status')
-      .in('status', ['sent', 'correction'])
-      .order('created_at', { ascending: true })
-      .limit(6),
-    supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(8),
-  ]);
+  const [groups, participants, teams, individuals, stands, approvedPayments, pendingPayments, audit] =
+    await Promise.all([
+      supabase.from('groups').select('id, name, code, status, country_code, created_at'),
+      supabase.from('participants').select('id', { count: 'exact', head: true }).eq('active', true),
+      supabase.from('teams').select('id, status'),
+      supabase.from('individual_registrations').select('id, status'),
+      supabase.from('stands').select('id, status'),
+      supabase.from('payments').select('reported_amount').eq('status', 'approved'),
+      supabase
+        .from('payments')
+        .select('id, concept, reference, expected_amount, created_at, group_id, status')
+        .in('status', ['sent', 'correction'])
+        .order('created_at', { ascending: true })
+        .limit(6),
+      // Un admin de alcance 'limited' no debe ver la bitácora: se omite la
+      // consulta directamente (además la RLS ya la bloquearía igual).
+      context.isFullAdmin
+        ? supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(8)
+        : Promise.resolve({ data: null }),
+    ]);
 
   const groupRows = groups.data ?? [];
   const approved = groupRows.filter((g) => g.status === 'approved');
@@ -132,7 +128,7 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className={context.isFullAdmin ? 'grid gap-5 lg:grid-cols-2' : 'grid gap-5'}>
         <Panel
           title="Pagos por revisar"
           description="Los más antiguos primero."
@@ -170,28 +166,27 @@ export default async function AdminDashboardPage() {
           )}
         </Panel>
 
-        <Panel title="Actividad reciente" description="Últimos movimientos registrados.">
-          {(audit.data ?? []).length === 0 ? (
-            <EmptyState icon="📜" title="Sin actividad todavía" />
-          ) : (
-            <ul className="space-y-3">
-              {(audit.data ?? []).map((entry) => (
-                <li key={entry.id} className="flex gap-3 text-sm">
-                  <span
-                    aria-hidden
-                    className="mt-1.5 size-2 shrink-0 rounded-full bg-scout-400"
-                  />
-                  <div>
-                    <p className="text-navy">{entry.action}</p>
-                    <p className="text-xs text-slate-500">
-                      {entry.actor_name} · {formatRelative(entry.created_at)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+        {context.isFullAdmin && (
+          <Panel title="Actividad reciente" description="Últimos movimientos registrados.">
+            {(audit.data ?? []).length === 0 ? (
+              <EmptyState icon="📜" title="Sin actividad todavía" />
+            ) : (
+              <ul className="space-y-3">
+                {(audit.data ?? []).map((entry) => (
+                  <li key={entry.id} className="flex gap-3 text-sm">
+                    <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-scout-400" />
+                    <div>
+                      <p className="text-navy">{entry.action}</p>
+                      <p className="text-xs text-slate-500">
+                        {entry.actor_name} · {formatRelative(entry.created_at)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        )}
       </div>
     </>
   );

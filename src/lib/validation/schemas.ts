@@ -297,6 +297,16 @@ export const refereeSchema = z.object({
 
 export type RefereeInput = z.infer<typeof refereeSchema>;
 
+// ─── Administradores ─────────────────────────────────────────────────────────
+
+export const adminUserSchema = z.object({
+  fullName: trimmed(3, 120, 'El nombre'),
+  email: z.email('Escribe un correo válido.'),
+  scope: z.enum(['full', 'limited']),
+});
+
+export type AdminUserInput = z.infer<typeof adminUserSchema>;
+
 // ─── Programación ────────────────────────────────────────────────────────────
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;

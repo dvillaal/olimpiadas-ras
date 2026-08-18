@@ -12,6 +12,8 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type UserRole = 'admin' | 'group' | 'referee';
+/** Alcance de un perfil admin: 'limited' no ve bitácora/correos ni puede dar de alta administradores. */
+export type AdminScope = 'full' | 'limited';
 export type GroupStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 export type SportType = 'individual' | 'group';
 export type RegistrationStatus =
@@ -104,6 +106,8 @@ type Group = {
 type Profile = {
   id: string;
   role: UserRole;
+  /** Solo relevante cuando role='admin'; 'full' en cualquier otro rol. */
+  admin_scope: AdminScope;
   group_id: string | null;
   full_name: string;
   email: string;
@@ -494,6 +498,7 @@ export interface Database {
     };
     Functions: {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      is_full_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       current_group_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       current_user_role: { Args: Record<PropertyKey, never>; Returns: UserRole };
       sport_effective_fee: { Args: { p_sport_id: string }; Returns: number };
@@ -574,6 +579,7 @@ export interface Database {
     };
     Enums: {
       user_role: UserRole;
+      admin_scope: AdminScope;
       group_status: GroupStatus;
       sport_type: SportType;
       registration_status: RegistrationStatus;
