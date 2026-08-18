@@ -131,7 +131,7 @@ export function AppShell({
                         'font-[family-name:var(--font-display)]',
                         isActive(item.href)
                           ? 'bg-sidebar-button text-white'
-                          : 'bg-sidebar-button/40 text-black/60 hover:bg-sidebar-button/70 hover:text-white',
+                          : 'bg-sidebar-button/40 text-black/40 hover:bg-sidebar-button/70 hover:text-white',
                       )
                     : cn(
                         'gap-3 px-3 py-2.5 text-[14px] font-semibold',
