@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { requireGroup } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { Alert } from '@/components/ui';
 import { CountryFlag } from '@/components/country-flag';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
-import { cardTitleClass } from '@/lib/fonts';
+import { cardTitleClass, titleFontClass } from '@/lib/fonts';
 import { CountryPicker } from './country-picker';
 
 export const metadata: Metadata = { title: 'Escoger país' };
@@ -29,12 +30,27 @@ export default async function GroupCountryPage() {
       {/* Si otro grupo escoge un país mientras miras, la lista se actualiza sola. */}
       <RealtimeRefresher tables={['groups', 'countries']} announce={false} />
 
-      <section className="rounded-3xl bg-plum px-6 py-5 text-white sm:px-8 sm:py-6">
-        <h1 className={cardTitleClass}>Escoger país</h1>
-        <p className="mt-1 text-sm text-white/75">
-          Cada grupo representa a un país distinto durante las Olimpiadas. Una vez escogido, solo
-          la organización puede cambiarlo.
-        </p>
+      <section className="grid grid-cols-1 items-stretch gap-3 overflow-hidden rounded-3xl bg-[#f3c116] p-3 text-navy sm:grid-cols-3 sm:p-4">
+        <div className="relative -m-3 h-48 overflow-hidden rounded-t-3xl sm:-m-4 sm:h-auto sm:rounded-l-3xl sm:rounded-tr-none">
+          <Image src="/home/jaque-mate.png" alt="¡Jaque mate!" fill className="object-contain object-center" />
+        </div>
+
+        <div className="flex min-w-0 flex-col items-center justify-center py-1 text-center">
+          <h1 className={`${cardTitleClass} !text-3xl sm:!text-4xl`}>Escoger país</h1>
+          <p className="mt-1 text-justify text-sm text-navy/75">
+            Cada grupo representa a un país distinto durante las Olimpiadas. Una vez escogido,
+            solo la organización puede cambiarlo.
+          </p>
+        </div>
+
+        <div className="flex flex-col justify-center rounded-2xl bg-plum px-4 py-3 text-center text-white">
+          <p className={`${titleFontClass} text-3xl font-black uppercase leading-none sm:text-4xl`}>
+            ¡Pilas!
+          </p>
+          <p className="mt-1.5 text-justify text-xs leading-snug text-white/80">
+            Juega de manera correcta y confirma en País para poder participar. ¡Buena suerte!
+          </p>
+        </div>
       </section>
 
       {mine ? (

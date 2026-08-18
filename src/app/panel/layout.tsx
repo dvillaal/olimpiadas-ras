@@ -1,8 +1,9 @@
-import { requireGroup } from '@/lib/auth/session';
+import { requireGroup, getSettings } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { AppShell, type NavItem } from '@/components/shell';
 import { LogoutButton } from '@/components/logout-button';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
+import { CountdownBanner } from './countdown-banner';
 
 /**
  * Estructura del panel de un grupo scout.
@@ -13,6 +14,7 @@ import { RealtimeRefresher } from '@/components/realtime-refresher';
  */
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const context = await requireGroup();
+  const settings = await getSettings();
   const supabase = await createClient();
 
   const [{ count: pendingRequests }, { count: unreadNotifications }] = await Promise.all([
@@ -55,6 +57,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         groupId={context.group.id}
         tables={['payments', 'intergroup_requests', 'notifications', 'teams', 'groups']}
       />
+      <CountdownBanner targetIso={settings.event_starts_at} />
       {children}
     </AppShell>
   );

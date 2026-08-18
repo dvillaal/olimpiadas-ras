@@ -9,7 +9,6 @@ import { displayFont, bodyFont } from '@/lib/fonts';
 import { CountryFlag } from '@/components/country-flag';
 import { Alert, LinkButton, StatusBadge } from '@/components/ui';
 import { NotificationList } from './notification-list';
-import { CountdownBanner } from './countdown-banner';
 
 export const metadata: Metadata = { title: 'Inicio' };
 
@@ -79,8 +78,6 @@ export default async function PanelHomePage() {
 
   return (
     <>
-      <CountdownBanner targetIso={settings.event_starts_at} />
-
       {needsAttention.length > 0 && (
         <Alert tone="warning" title="Tienes pagos que requieren tu atención" className="mb-5">
           {needsAttention.map((payment) => (
