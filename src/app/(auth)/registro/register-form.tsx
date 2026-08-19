@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { registerGroupAction, type ActionState } from '../actions';
 import { Alert, Button, Checkbox, Field } from '@/components/ui';
+import { GroupNameField } from './group-name-field';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -25,16 +26,7 @@ export function RegisterForm() {
       <fieldset className="space-y-4">
         <legend className="kicker mb-2">Datos del grupo</legend>
 
-        <Field label="Nombre del grupo scout" htmlFor="name" error={errors.name} required>
-          <input
-            id="name"
-            name="name"
-            required
-            className="field-input"
-            placeholder="Grupo Scout Horizonte"
-            autoComplete="organization"
-          />
-        </Field>
+        <GroupNameField error={errors.name} />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Ciudad" htmlFor="city" error={errors.city} required>
