@@ -2,14 +2,33 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ToastProvider } from '@/components/toast';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+const description =
+  'Sistema de inscripción de las Olimpiadas Scouts: grupos, participantes, países, deportes, equipos intergrupales, pagos y stands.';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: 'Olimpiadas Scouts',
     template: '%s · Olimpiadas Scouts',
   },
-  description:
-    'Sistema de inscripción de las Olimpiadas Scouts: grupos, participantes, países, deportes, equipos intergrupales, pagos y stands.',
+  description,
   robots: { index: false, follow: false },
+  openGraph: {
+    title: 'Olimpiadas Scouts',
+    description,
+    url: siteUrl,
+    siteName: 'Olimpiadas Scouts',
+    locale: 'es_CO',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1920, height: 1080, alt: 'Olimpiadas Scouts 2026' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Olimpiadas Scouts',
+    description,
+    images: ['/og-image.png'],
+  },
 };
 
 export const viewport: Viewport = {
