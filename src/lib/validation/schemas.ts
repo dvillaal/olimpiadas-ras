@@ -238,6 +238,36 @@ export const paymentSchema = z.object({
 
 export type PaymentInput = z.infer<typeof paymentSchema>;
 
+/** Un solo comprobante/referencia que cubre varios conceptos a la vez. */
+export const bulkPaymentSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        payableType: z.enum(['team', 'individual', 'stand']),
+        payableId: z.uuid(),
+        concept: z.string().trim().min(3).max(200),
+        expectedAmount: z.coerce.number().min(0),
+      }),
+    )
+    .min(2, 'Selecciona al menos dos conceptos para pagarlos juntos.'),
+  reportedAmount: z.coerce.number().min(1, 'Escribe el valor consignado.'),
+  paymentDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Usa el formato AAAA-MM-DD.')
+    .refine((v) => new Date(`${v}T00:00:00`) <= new Date(), 'La fecha no puede ser futura.'),
+  payerName: trimmed(3, 120, 'El nombre de quien pagó'),
+  payerDocument: z.union([documentSchema, z.literal('')]).optional().default(''),
+  originBank: optionalText(80),
+  reference: z
+    .string()
+    .trim()
+    .min(4, 'La referencia debe tener al menos 4 caracteres.')
+    .max(60),
+  notes: optionalText(500),
+});
+
+export type BulkPaymentInput = z.infer<typeof bulkPaymentSchema>;
+
 export const reviewPaymentSchema = z
   .object({
     paymentId: z.uuid(),

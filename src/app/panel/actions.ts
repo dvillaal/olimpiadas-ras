@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { teamDisplayName } from '@/lib/domain/eligibility';
 import {
+  bulkPaymentSchema,
   fieldErrors,
   intergroupProposalSchema,
   intergroupRequestSchema,
@@ -544,6 +545,73 @@ export async function submitPaymentAction(
   revalidatePath('/panel/pagos');
   revalidatePath('/panel');
   return { ok: true, message: 'Pago enviado para revisión.' };
+}
+
+/**
+ * Registra un solo comprobante/referencia que cubre varios conceptos a la
+ * vez, para el grupo que consigna todo junto en lugar de pagar por partes.
+ */
+export async function submitBulkPaymentAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireGroup();
+
+  const upload = await uploadProofAction(formData);
+  if (!upload.ok) return { errors: { proof: upload.error } };
+
+  let items: unknown;
+  try {
+    items = JSON.parse(String(formData.get('items') ?? '[]'));
+  } catch {
+    items = [];
+  }
+
+  const parsed = bulkPaymentSchema.safeParse({
+    items,
+    reportedAmount: formData.get('reportedAmount'),
+    paymentDate: formData.get('paymentDate'),
+    payerName: formData.get('payerName'),
+    payerDocument: formData.get('payerDocument') ?? '',
+    originBank: formData.get('originBank') ?? '',
+    reference: formData.get('reference'),
+    notes: formData.get('notes') ?? '',
+  });
+
+  if (!parsed.success) {
+    // El archivo ya subió; se limpia para no dejar huérfanos en el bucket.
+    await createAdminClient().storage.from('comprobantes').remove([upload.proof.path]);
+    return { errors: fieldErrors(parsed.error) };
+  }
+
+  const input = parsed.data;
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc('submit_payment_bulk', {
+    p_items: input.items,
+    p_reported_amount: input.reportedAmount,
+    p_payment_date: input.paymentDate,
+    p_payer_name: input.payerName,
+    p_payer_document: input.payerDocument ?? '',
+    p_origin_bank: input.originBank ?? '',
+    p_reference: input.reference,
+    p_proof_path: upload.proof.path,
+    p_proof_name: upload.proof.name,
+    p_proof_size: upload.proof.size,
+    p_notes: input.notes ?? '',
+  });
+
+  if (error) {
+    await createAdminClient().storage.from('comprobantes').remove([upload.proof.path]);
+    if (error.code === '23505') {
+      return { errors: { reference: 'Esa referencia ya fue registrada para alguno de estos conceptos.' } };
+    }
+    return { errors: { _: friendlyError(error) } };
+  }
+
+  revalidatePath('/panel/pagos');
+  revalidatePath('/panel');
+  return { ok: true, message: `Pago enviado para revisión (${input.items.length} conceptos).` };
 }
 
 /** Enlace firmado para que el grupo vuelva a ver su propio comprobante. */

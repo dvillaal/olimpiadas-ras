@@ -531,6 +531,22 @@ export interface Database {
         };
         Returns: Payment;
       };
+      submit_payment_bulk: {
+        Args: {
+          p_items: unknown;
+          p_reported_amount: number;
+          p_payment_date: string;
+          p_payer_name: string;
+          p_payer_document: string;
+          p_origin_bank: string;
+          p_reference: string;
+          p_proof_path: string;
+          p_proof_name: string;
+          p_proof_size: number;
+          p_notes?: string;
+        };
+        Returns: Payment[];
+      };
       accept_intergroup_proposal: { Args: { p_request_id: string }; Returns: undefined };
       review_intergroup_request: {
         Args: { p_request_id: string; p_approve: boolean; p_note?: string };

@@ -7,7 +7,7 @@ import { formatDate, formatRelative } from '@/lib/utils';
 import { Alert, StatusBadge } from '@/components/ui';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
 import { cardTitleClass } from '@/lib/fonts';
-import { PaymentForm } from './payment-form';
+import { PendingConcepts } from './pending-concepts';
 import { ProofLink } from './proof-link';
 import type { PayableType } from '@/types/database';
 
@@ -189,49 +189,12 @@ export default async function GroupPaymentsPage() {
 
       <section className="rounded-3xl bg-plum p-5 text-white">
         <h3 className={cardTitleClass}>Conceptos por pagar ({pending.length})</h3>
-        <p className="mb-3 text-sm text-white/75">Registra un pago por cada concepto.</p>
+        <p className="mb-3 text-sm text-white/75">
+          Registra un pago por cada concepto, o marca varios para pagarlos juntos con un solo
+          comprobante.
+        </p>
 
-        {pending.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/25 px-4 py-8 text-center">
-            <span className="mb-2 block text-3xl" aria-hidden>
-              ✅
-            </span>
-            <p className="font-semibold text-white">No tienes conceptos pendientes</p>
-            <p className="mt-1 text-sm text-white/75">
-              Todo lo que has inscrito está pagado o no tiene costo.
-            </p>
-          </div>
-        ) : (
-          <ul className="space-y-4">
-            {pending.map((concept) => (
-              <li
-                key={`${concept.payableType}:${concept.payableId}`}
-                className="rounded-2xl border border-white/20 bg-white/10 p-4"
-              >
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <b className="text-white">{concept.label}</b>
-                  <span className="text-lg font-extrabold text-amber-300">
-                    {formatCOP(concept.amount)}
-                  </span>
-                </div>
-
-                {concept.blocked ? (
-                  <Alert tone="info">{concept.blocked}</Alert>
-                ) : (
-                  <div className="rounded-2xl bg-jade p-4">
-                    <PaymentForm
-                      payableType={concept.payableType}
-                      payableId={concept.payableId}
-                      concept={concept.label}
-                      expectedAmount={concept.amount}
-                      maxProofMb={settings.max_proof_mb}
-                    />
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        <PendingConcepts concepts={pending} maxProofMb={settings.max_proof_mb} />
       </section>
 
       <section className="rounded-3xl bg-scout-600 p-5 text-white">
