@@ -1,10 +1,11 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { registerGroupAction, type ActionState } from '../actions';
 import { Alert, Button, Checkbox, Field } from '@/components/ui';
 import { GroupNameField } from './group-name-field';
+import { PrivacyPolicyModal } from './privacy-policy-modal';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -18,6 +19,7 @@ function SubmitButton() {
 export function RegisterForm() {
   const [state, formAction] = useActionState<ActionState, FormData>(registerGroupAction, {});
   const errors = state.errors ?? {};
+  const [policyOpen, setPolicyOpen] = useState(false);
 
   return (
     <form action={formAction} className="space-y-5" noValidate>
@@ -62,34 +64,17 @@ export function RegisterForm() {
           />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Documento"
-            htmlFor="leaderDocument"
-            error={errors.leaderDocument}
+        <Field label="Teléfono" htmlFor="leaderPhone" error={errors.leaderPhone} required>
+          <input
+            id="leaderPhone"
+            name="leaderPhone"
             required
-          >
-            <input
-              id="leaderDocument"
-              name="leaderDocument"
-              required
-              className="field-input"
-              placeholder="1020304050"
-              inputMode="numeric"
-            />
-          </Field>
-          <Field label="Teléfono" htmlFor="leaderPhone" error={errors.leaderPhone} required>
-            <input
-              id="leaderPhone"
-              name="leaderPhone"
-              required
-              className="field-input"
-              placeholder="3001234567"
-              inputMode="tel"
-              autoComplete="tel"
-            />
-          </Field>
-        </div>
+            className="field-input"
+            placeholder="3001234567"
+            inputMode="tel"
+            autoComplete="tel"
+          />
+        </Field>
 
         <Field
           label="Correo electrónico"
@@ -120,20 +105,31 @@ export function RegisterForm() {
         </Field>
       </fieldset>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-scout-50 p-4 text-sm text-slate-700">
-        <Checkbox name="acceptsTerms" className="mt-0.5" required />
+      <div className="flex items-start gap-3 rounded-xl bg-scout-50 p-4 text-sm text-slate-700">
+        <label className="flex cursor-pointer items-start gap-3">
+          <Checkbox name="acceptsTerms" className="mt-0.5" required />
+        </label>
         <span>
-          Autorizo el tratamiento de los datos personales del grupo y de sus participantes con el
-          único fin de gestionar la inscripción y participación en el evento, conforme a la Ley 1581
-          de 2012.
+          Autorizo el{' '}
+          <button
+            type="button"
+            onClick={() => setPolicyOpen(true)}
+            className="cursor-pointer font-semibold text-scout-700 underline underline-offset-2 hover:text-scout-800"
+          >
+            tratamiento de datos personales
+          </button>{' '}
+          del grupo y de sus participantes con el único fin de gestionar la inscripción y
+          participación en el evento, conforme a la Ley 1581 de 2012.
         </span>
-      </label>
+      </div>
       {errors.acceptsTerms && (
         <p className="field-error" role="alert">
           <span aria-hidden>⚠</span>
           {errors.acceptsTerms}
         </p>
       )}
+
+      <PrivacyPolicyModal open={policyOpen} onClose={() => setPolicyOpen(false)} />
 
       <SubmitButton />
     </form>

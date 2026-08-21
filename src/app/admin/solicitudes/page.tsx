@@ -63,7 +63,6 @@ export default async function RequestsPage() {
                 <dl className="mb-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                   {[
                     ['Responsable', group.leader_name],
-                    ['Documento', group.leader_document || '—'],
                     ['Correo', group.leader_email],
                     ['Teléfono', group.leader_phone || '—'],
                   ].map(([label, value]) => (

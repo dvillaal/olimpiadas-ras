@@ -63,26 +63,15 @@ export function GroupForm() {
         />
       </Field>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Documento" htmlFor="leaderDocument" error={errors.leaderDocument} required>
-          <input
-            id="leaderDocument"
-            name="leaderDocument"
-            required
-            className="field-input"
-            placeholder="1020304050"
-          />
-        </Field>
-        <Field label="Teléfono" htmlFor="leaderPhone" error={errors.leaderPhone} required>
-          <input
-            id="leaderPhone"
-            name="leaderPhone"
-            required
-            className="field-input"
-            placeholder="3001234567"
-          />
-        </Field>
-      </div>
+      <Field label="Teléfono" htmlFor="leaderPhone" error={errors.leaderPhone} required>
+        <input
+          id="leaderPhone"
+          name="leaderPhone"
+          required
+          className="field-input"
+          placeholder="3001234567"
+        />
+      </Field>
 
       <Field
         label="Correo del responsable"
