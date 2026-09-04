@@ -402,8 +402,6 @@ export async function saveStandAction(_prev: ActionState, formData: FormData): P
     email: formData.get('email') ?? '',
     products: formData.get('products'),
     description: formData.get('description') ?? '',
-    needsPower: formData.get('needsPower') === 'on',
-    needsFurniture: formData.get('needsFurniture') === 'on',
     notes: formData.get('notes') ?? '',
   });
 
@@ -424,8 +422,6 @@ export async function saveStandAction(_prev: ActionState, formData: FormData): P
       email: input.email || null,
       products: input.products,
       description: input.description,
-      needs_power: input.needsPower,
-      needs_furniture: input.needsFurniture,
       notes: input.notes,
     },
     { onConflict: 'group_id' },

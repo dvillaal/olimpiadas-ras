@@ -4,7 +4,7 @@ import { useActionState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import { saveStandAction } from '../actions';
 import type { ActionState } from '@/app/(auth)/actions';
-import { Alert, Button, Checkbox, Field } from '@/components/ui';
+import { Alert, Button, Field } from '@/components/ui';
 import { useToast } from '@/components/toast';
 
 export interface StandDraft {
@@ -15,8 +15,6 @@ export interface StandDraft {
   email: string;
   products: string;
   description: string;
-  needsPower: boolean;
-  needsFurniture: boolean;
   notes: string;
 }
 
@@ -164,20 +162,6 @@ export function StandForm({ stand }: { stand?: StandDraft }) {
           defaultValue={stand?.description}
         />
       </Field>
-
-      <fieldset className="space-y-2 rounded-xl border border-white/20 bg-white/10 p-4">
-        <legend className="mb-1 text-[11px] font-black uppercase tracking-[0.12em] text-white/70">
-          Requerimientos
-        </legend>
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-white">
-          <Checkbox tone="dark" name="needsPower" defaultChecked={stand?.needsPower} />
-          ⚡ Necesitamos toma de energía
-        </label>
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-white">
-          <Checkbox tone="dark" name="needsFurniture" defaultChecked={stand?.needsFurniture} />
-          🪑 Necesitamos mesas y sillas
-        </label>
-      </fieldset>
 
       <Field
         label="Observaciones"

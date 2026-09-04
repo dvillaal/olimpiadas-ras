@@ -85,8 +85,6 @@ export default async function AdminStandsPage() {
                 </dl>
 
                 <div className="flex flex-wrap gap-1.5">
-                  {stand.needs_power && <Badge tone="blue">⚡ Requiere energía</Badge>}
-                  {stand.needs_furniture && <Badge tone="blue">🪑 Requiere mobiliario</Badge>}
                   <Badge tone="gray">{formatCOP(Number(stand.amount))}</Badge>
                 </div>
 

@@ -51,8 +51,6 @@ export default async function GroupStandPage() {
           <p className="mb-3 text-sm text-white/80">{stand.products}</p>
 
           <div className="flex flex-wrap gap-1.5">
-            {stand.needs_power && <Badge tone="blue">⚡ Requiere energía</Badge>}
-            {stand.needs_furniture && <Badge tone="blue">🪑 Requiere mobiliario</Badge>}
             <Badge tone="gray">{formatCOP(Number(stand.amount))}</Badge>
           </div>
 
@@ -98,8 +96,6 @@ export default async function GroupStandPage() {
                       email: stand.email ?? '',
                       products: stand.products,
                       description: stand.description,
-                      needsPower: stand.needs_power,
-                      needsFurniture: stand.needs_furniture,
                       notes: stand.notes,
                     }
                   : undefined

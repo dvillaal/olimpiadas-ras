@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { KNOWN_GROUP_NAMES } from '@/lib/domain/known-groups';
 
 /**
  * Esquemas de validación compartidos entre formularios de cliente y Server
@@ -33,7 +34,12 @@ export const genderSchema = z.enum(['F', 'M', 'O']);
 // ─── Registro y acceso ───────────────────────────────────────────────────────
 
 export const registerGroupSchema = z.object({
-  name: trimmed(3, 120, 'El nombre del grupo'),
+  // Solo se puede escoger uno de los grupos conocidos por la organización:
+  // el registro público dejó de aceptar texto libre para evitar que cada
+  // quien escribiera el nombre de su grupo de una forma distinta.
+  name: z.enum(KNOWN_GROUP_NAMES, {
+    error: 'Selecciona el nombre de tu grupo de la lista.',
+  }),
   city: trimmed(2, 80, 'La ciudad'),
   department: optionalText(80),
   leaderName: trimmed(3, 120, 'El nombre del responsable'),
@@ -204,8 +210,6 @@ export const standSchema = z.object({
   email: z.union([z.email('Correo inválido.').toLowerCase(), z.literal('')]).optional().default(''),
   products: trimmed(3, 500, 'Los productos'),
   description: optionalText(1000),
-  needsPower: z.boolean().default(false),
-  needsFurniture: z.boolean().default(false),
   notes: optionalText(500),
 });
 
