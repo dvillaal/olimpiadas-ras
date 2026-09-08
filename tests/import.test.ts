@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  branchFromRole,
+  CURRENT_ENROLLMENT_YEAR,
+  docTypeFromAge,
   normalizeDate,
   normalizeHeader,
   parseCsv,
+  splitFullName,
   validateRows,
   type ImportContext,
+  type RegionalMemberLookup,
 } from '@/lib/import/participants';
 
 const context: ImportContext = {
@@ -165,6 +170,18 @@ describe('validateRows', () => {
     expect(result.issues.some((i) => i.column === 'FECHA_NACIMIENTO')).toBe(true);
   });
 
+  /**
+   * La tabla `participants` exige `birthdate > '1950-01-01'`. Sin este
+   * chequeo aquí, una sola fila con la fecha mal digitada (un problema común
+   * en la base regional) no se veía en la previsualización y tumbaba TODO
+   * el lote de inserción al confirmar, sin explicación.
+   */
+  it('rechaza una fecha de nacimiento anterior a 1950', () => {
+    const result = validateRows([row({ FECHA_NACIMIENTO: '1900-01-01' })], context);
+    expect(result.issues.some((i) => i.column === 'FECHA_NACIMIENTO')).toBe(true);
+    expect(result.valid).toHaveLength(0);
+  });
+
   // El formulario ya no pide teléfono, correo ni estado: todo participante
   // importado entra activo, sin necesidad de columna alguna para lograrlo.
   it('siempre entra activo, sin importar la fila', () => {
@@ -197,5 +214,318 @@ describe('validateRows', () => {
     expect(result.valid).toHaveLength(1);
     expect(result.issues.length).toBeGreaterThan(0);
     expect(result.totalRows).toBe(2);
+  });
+});
+
+describe('docTypeFromAge', () => {
+  it('usa registro civil para menores de 7', () => {
+    expect(docTypeFromAge(0)).toBe('RC');
+    expect(docTypeFromAge(6)).toBe('RC');
+  });
+
+  it('usa tarjeta de identidad entre 7 y 17', () => {
+    expect(docTypeFromAge(7)).toBe('TI');
+    expect(docTypeFromAge(17)).toBe('TI');
+  });
+
+  it('usa cédula de ciudadanía de 18 en adelante', () => {
+    expect(docTypeFromAge(18)).toBe('CC');
+    expect(docTypeFromAge(45)).toBe('CC');
+  });
+});
+
+describe('splitFullName', () => {
+  it('reparte los últimos dos términos como apellidos', () => {
+    expect(splitFullName('María Fernanda Ríos Gómez')).toEqual({
+      firstNames: 'María Fernanda',
+      lastNames: 'Ríos Gómez',
+    });
+  });
+
+  it('reparte uno y uno cuando solo hay dos palabras', () => {
+    expect(splitFullName('Ana Ruiz')).toEqual({ firstNames: 'Ana', lastNames: 'Ruiz' });
+  });
+
+  it('con tres palabras deja una en nombres y dos en apellidos', () => {
+    expect(splitFullName('Juan Pérez Gómez')).toEqual({
+      firstNames: 'Juan',
+      lastNames: 'Pérez Gómez',
+    });
+  });
+
+  it('con una sola palabra la deja toda en nombres', () => {
+    expect(splitFullName('Ana')).toEqual({ firstNames: 'Ana', lastNames: '' });
+  });
+
+  it('ignora espacios repetidos', () => {
+    expect(splitFullName('  Ana   María   Ruiz   Gómez  ')).toEqual({
+      firstNames: 'Ana María',
+      lastNames: 'Ruiz Gómez',
+    });
+  });
+});
+
+describe('validateRows con cruce regional (por Id Scout)', () => {
+  const row = (overrides: Record<string, string> = {}) => ({
+    row: 2,
+    values: {
+      CODIGO_GRUPO: 'GS-001',
+      ...overrides,
+    },
+  });
+
+  const regionalMembers = new Map<number, RegionalMemberLookup>([
+    [
+      555,
+      {
+        fullName: 'María Fernanda Ríos Gómez',
+        document: '1234567890',
+        birthdate: '2012-05-20',
+        gender: 'F',
+        unit: 'TROPA',
+        functionName: 'JOVEN',
+        status: 'ACTIVO',
+        enrollmentYear: '2026',
+      },
+    ],
+  ]);
+
+  const branchAgeRanges = [
+    { id: 'lobatos', name: 'Lobatos', min_age: 7, max_age: 10 },
+    { id: 'scouts', name: 'Scouts', min_age: 11, max_age: 14 },
+  ];
+
+  const crossRefContext: ImportContext = {
+    ...context,
+    branchIds: new Set(['lobatos', 'scouts', 'adultos', 'jefe-de-grupo', 'jefatura', 'consejero']),
+    regionalMembers,
+    branchAgeRanges,
+  };
+
+  it('completa documento, nombres, nacimiento, género y rama solo con el Id Scout', () => {
+    const result = validateRows([row({ ID_SCOUT: '555' })], crossRefContext);
+
+    expect(result.issues).toEqual([]);
+    expect(result.valid).toHaveLength(1);
+    const participant = result.valid[0]!;
+    expect(participant.document).toBe('1234567890');
+    expect(participant.firstNames).toBe('María Fernanda');
+    expect(participant.lastNames).toBe('Ríos Gómez');
+    expect(participant.birthdate).toBe('2012-05-20');
+    expect(participant.gender).toBe('F');
+    // La rama sale de la unidad regional (TROPA → scouts), no de la edad.
+    expect(participant.branchId).toBe('scouts');
+    // Sin TIPO_DOCUMENTO en el archivo, se deduce de la edad: 14 años → TI.
+    expect(participant.docType).toBe('TI');
+  });
+
+  it('lo que trae el archivo manda sobre la base regional', () => {
+    const result = validateRows(
+      [
+        row({
+          ID_SCOUT: '555',
+          NOMBRES: 'Otro',
+          APELLIDOS: 'Nombre',
+          NUMERO_DOCUMENTO: '9999999999',
+        }),
+      ],
+      crossRefContext,
+    );
+
+    expect(result.valid).toHaveLength(1);
+    expect(result.valid[0]?.firstNames).toBe('Otro');
+    expect(result.valid[0]?.lastNames).toBe('Nombre');
+    expect(result.valid[0]?.document).toBe('9999999999');
+  });
+
+  it('sin Id Scout que coincida, sigue exigiendo los datos del archivo', () => {
+    const result = validateRows([row({ ID_SCOUT: '000' })], crossRefContext);
+    expect(result.valid).toHaveLength(0);
+    expect(result.issues.length).toBeGreaterThan(0);
+  });
+
+  it('sin base regional en el contexto, se comporta como antes', () => {
+    const result = validateRows([row({ ID_SCOUT: '555' })], context);
+    expect(result.valid).toHaveLength(0);
+  });
+
+  /**
+   * Bug real: el archivo simple que entrega cada grupo solo tiene una
+   * columna "Nombres" con el nombre COMPLETO (no solo los nombres de pila).
+   * Antes, esa columna se tomaba tal cual como "nombres" y además se le
+   * pegaban los apellidos deducidos de la base regional, duplicando el
+   * nombre completo (p. ej. "GABRIELA LUCIA HINCAPIE POSADA HINCAPIE
+   * POSADA").
+   */
+  it('no duplica el nombre cuando el archivo solo trae una columna con el nombre completo', () => {
+    const result = validateRows(
+      [row({ ID_SCOUT: '555', NOMBRES: 'María Fernanda Ríos Gómez' })],
+      crossRefContext,
+    );
+
+    expect(result.valid).toHaveLength(1);
+    expect(result.valid[0]?.firstNames).toBe('María Fernanda');
+    expect(result.valid[0]?.lastNames).toBe('Ríos Gómez');
+    expect(result.valid[0]?.fullName).toBe('María Fernanda Ríos Gómez');
+  });
+
+  it('reparte el nombre completo de una sola columna cuando no hay coincidencia regional', () => {
+    const result = validateRows(
+      [row({ NOMBRES: 'Carlos David Cruz Zuluaga' })],
+      { ...context, branchAgeRanges: [] },
+    );
+
+    // Sin base regional ni RAMA/FECHA_NACIMIENTO en el archivo, la fila sigue
+    // sin pasar por esos otros campos, pero el nombre no debe duplicarse.
+    const issue = result.issues.find((i) => i.column === 'APELLIDOS');
+    expect(issue).toBeUndefined();
+  });
+
+  /**
+   * Réplica de la herramienta externa que ya usa la organización: alguien de
+   * la base regional solo es candidato válido si figura ACTIVO e inscrito
+   * este año. Si no, se descarta igual que si no estuviera en la base.
+   */
+  it('descarta el cruce cuando el estado regional no es ACTIVO', () => {
+    const inactiveMembers = new Map<number, RegionalMemberLookup>([
+      [
+        555,
+        {
+          fullName: 'María Fernanda Ríos Gómez',
+          document: '1234567890',
+          birthdate: '2012-05-20',
+          gender: 'F',
+          unit: 'TROPA',
+          functionName: 'JOVEN',
+          status: 'RETIRADO',
+          enrollmentYear: CURRENT_ENROLLMENT_YEAR,
+        },
+      ],
+    ]);
+
+    const result = validateRows(
+      [row({ ID_SCOUT: '555' })],
+      { ...crossRefContext, regionalMembers: inactiveMembers },
+    );
+
+    expect(result.valid).toHaveLength(0);
+    const message = result.issues.map((i) => i.message).join(' ');
+    expect(message).toContain('no figura activo e inscrito');
+  });
+
+  it('descarta el cruce cuando el año de inscripción no es el del evento actual', () => {
+    const staleMembers = new Map<number, RegionalMemberLookup>([
+      [
+        555,
+        {
+          fullName: 'María Fernanda Ríos Gómez',
+          document: '1234567890',
+          birthdate: '2012-05-20',
+          gender: 'F',
+          unit: 'TROPA',
+          functionName: 'JOVEN',
+          status: 'ACTIVO',
+          enrollmentYear: '2025',
+        },
+      ],
+    ]);
+
+    const result = validateRows(
+      [row({ ID_SCOUT: '555' })],
+      { ...crossRefContext, regionalMembers: staleMembers },
+    );
+
+    expect(result.valid).toHaveLength(0);
+    const message = result.issues.map((i) => i.message).join(' ');
+    expect(message).toContain('no figura activo e inscrito');
+  });
+
+  it('usa el cruce cuando está activo e inscrito en el año actual', () => {
+    const eligibleMembers = new Map<number, RegionalMemberLookup>([
+      [
+        555,
+        {
+          fullName: 'María Fernanda Ríos Gómez',
+          document: '1234567890',
+          birthdate: '2012-05-20',
+          gender: 'F',
+          unit: 'TROPA',
+          functionName: 'JOVEN',
+          status: 'activo', // minúsculas: el estado se normaliza antes de comparar
+          enrollmentYear: CURRENT_ENROLLMENT_YEAR,
+        },
+      ],
+    ]);
+
+    const result = validateRows(
+      [row({ ID_SCOUT: '555' })],
+      { ...crossRefContext, regionalMembers: eligibleMembers },
+    );
+
+    expect(result.valid).toHaveLength(1);
+    expect(result.valid[0]?.branchId).toBe('scouts');
+  });
+});
+
+describe('branchFromRole (deducción de rama por cargo, igual que la herramienta externa)', () => {
+  it('reconoce jefe de grupo o director de grupo por función', () => {
+    expect(branchFromRole('GRUPO', 'JEFE DE GRUPO')).toBe('jefe-de-grupo');
+    expect(branchFromRole('GRUPO', 'DIRECTOR DE GRUPO')).toBe('jefe-de-grupo');
+  });
+
+  it('reconoce consejero por función con "CONSEJO"', () => {
+    expect(branchFromRole('GRUPO', 'CONSEJO DE GRUPO')).toBe('consejero');
+  });
+
+  it('reconoce jefatura por jefe/sub-jefe/scouter/dirigente', () => {
+    expect(branchFromRole('TROPA', 'JEFE DE TROPA')).toBe('jefatura');
+    expect(branchFromRole('TROPA', 'SUB JEFE')).toBe('jefatura');
+    expect(branchFromRole('TROPA', 'SUBJEFE')).toBe('jefatura');
+    expect(branchFromRole('MANADA', 'SCOUTER')).toBe('jefatura');
+    expect(branchFromRole('CLAN', 'DIRIGENTE')).toBe('jefatura');
+  });
+
+  it('un cargo de jefatura pesa más que la unidad, aunque la unidad sea de rama juvenil', () => {
+    // "Jefe de Tropa" no es un scout de esa tropa: el cargo manda sobre la unidad.
+    expect(branchFromRole('TROPA', 'JEFE DE TROPA')).toBe('jefatura');
+  });
+
+  it('reconoce cachorros por unidad o función con CACHORRO/CASTOR', () => {
+    expect(branchFromRole('CACHORROS', 'JOVEN')).toBe('cachorros');
+    expect(branchFromRole('CASTORES', 'JOVEN')).toBe('cachorros');
+  });
+
+  it('reconoce lobatos por unidad MANADA o función LOBATO', () => {
+    expect(branchFromRole('MANADA', 'JOVEN')).toBe('lobatos');
+    expect(branchFromRole('', 'LOBATO')).toBe('lobatos');
+  });
+
+  it('reconoce webelos por unidad o función con WEBELO', () => {
+    expect(branchFromRole('WEBELOS', 'JOVEN')).toBe('webelos');
+  });
+
+  it('reconoce scouts por unidad TROPA/SCOUT o función exacta "SCOUT"', () => {
+    expect(branchFromRole('TROPA', 'JOVEN')).toBe('scouts');
+    expect(branchFromRole('', 'SCOUT')).toBe('scouts');
+  });
+
+  it('reconoce nomadas por unidad COMUNIDAD o función con NOMADA', () => {
+    expect(branchFromRole('COMUNIDAD', 'JOVEN')).toBe('nomadas');
+    expect(branchFromRole('', 'NOMADA')).toBe('nomadas');
+  });
+
+  it('reconoce rovers por unidad CLAN o función con ROVER', () => {
+    expect(branchFromRole('CLAN', 'JOVEN')).toBe('rovers');
+    expect(branchFromRole('', 'ROVER')).toBe('rovers');
+  });
+
+  it('cae en adultos cuando nada coincide', () => {
+    expect(branchFromRole('OTRA UNIDAD', 'VOLUNTARIO')).toBe('adultos');
+    expect(branchFromRole('', '')).toBe('adultos');
+  });
+
+  it('ignora acentos y mayúsculas/minúsculas', () => {
+    expect(branchFromRole('tropa', 'jóven')).toBe('scouts');
+    expect(branchFromRole('CLÁN', 'róver')).toBe('rovers');
   });
 });

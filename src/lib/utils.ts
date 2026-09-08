@@ -6,6 +6,14 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
+/** Minúsculas y sin tildes, para comparar texto en buscadores sin importar acentos. */
+export function normalizeSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
 /** Fecha larga en español: "20 de mayo de 2012". */
 export function formatDate(value: string | null | undefined): string {
   if (!value) return '—';

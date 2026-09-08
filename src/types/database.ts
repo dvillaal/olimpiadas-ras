@@ -134,6 +134,27 @@ type Participant = {
   updated_at: string;
 };
 
+/**
+ * Fila del reporte regional completo (Reporte-2026-Unificado): todos los
+ * miembros activos de la región, no solo los inscritos al evento. Sirve para
+ * completar automáticamente documento/nacimiento/género al importar
+ * participantes buscando por `scout_id`.
+ */
+type RegionalMember = {
+  scout_id: number;
+  full_name: string;
+  document: string;
+  birthdate: string | null;
+  gender: Gender | null;
+  phone: string;
+  group_name: string;
+  unit: string;
+  function_name: string;
+  status: string;
+  enrollment_year: string;
+  updated_at: string;
+};
+
 type Sport = {
   id: string;
   slug: string;
@@ -436,6 +457,7 @@ export interface Database {
           'full_name'
         >
       >;
+      regional_members: TableDef<RegionalMember, Insertable<RegionalMember, 'scout_id' | 'full_name'>>;
       sports: TableDef<Sport, Insertable<Sport, 'slug' | 'name' | 'type'>>;
       sport_branches: TableDef<SportBranch, SportBranch>;
       teams: TableDef<Team, Insertable<Team, 'owner_group_id' | 'sport_id' | 'name'>>;
@@ -629,6 +651,7 @@ export type {
   Group,
   Profile,
   Participant,
+  RegionalMember,
   Sport,
   SportBranch,
   Team,
