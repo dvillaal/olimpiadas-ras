@@ -155,9 +155,13 @@ export function RefereeForm({
           Un checkbox sin marcar no se envía. Sin este campo espejo, desactivar
           a un árbitro no tendría efecto: el servidor no distinguiría entre
           «desmarcado» y «no vino en el formulario».
+          El orden importa: FormData.get() devuelve el PRIMER valor con ese
+          nombre en el orden del documento. El checkbox va primero para que,
+          si está marcado, su "true" gane; el campo oculto con "false" es el
+          respaldo para cuando el checkbox no se envía (desmarcado).
         */}
-        <input type="hidden" name="active" value="false" />
         <Checkbox name="active" value="true" defaultChecked={editing?.active ?? true} />
+        <input type="hidden" name="active" value="false" />
         Árbitro activo
       </label>
 

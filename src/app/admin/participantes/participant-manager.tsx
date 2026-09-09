@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Branch } from '@/types/database';
 import { Badge, EmptyState, Panel } from '@/components/ui';
 import { ParticipantImporter } from '@/components/participant-importer';
@@ -29,6 +29,14 @@ export function ParticipantManager({
 }) {
   const [editing, setEditing] = useState<ParticipantEditing | null>(null);
   const [regionalOpen, setRegionalOpen] = useState(false);
+  const formPanelRef = useRef<HTMLDivElement>(null);
+
+  // El formulario de edición vive arriba del listado; el botón "Editar" está
+  // abajo, en la tabla. Sin este scroll, al hacer clic el formulario se llena
+  // pero queda fuera de la vista y parece que el botón no hizo nada.
+  useEffect(() => {
+    if (editing) formPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [editing]);
 
   return (
     <>
@@ -85,17 +93,19 @@ export function ParticipantManager({
           />
         </Panel>
 
-        <Panel
-          title={editing ? 'Editar participante' : 'Registrar participante'}
-          description={editing ? undefined : 'Para cargas grandes usa la importación.'}
-        >
-          <ParticipantForm
-            groups={groups}
-            branches={branches}
-            editing={editing}
-            onCancelEdit={() => setEditing(null)}
-          />
-        </Panel>
+        <div ref={formPanelRef}>
+          <Panel
+            title={editing ? 'Editar participante' : 'Registrar participante'}
+            description={editing ? undefined : 'Para cargas grandes usa la importación.'}
+          >
+            <ParticipantForm
+              groups={groups}
+              branches={branches}
+              editing={editing}
+              onCancelEdit={() => setEditing(null)}
+            />
+          </Panel>
+        </div>
       </div>
 
       <Panel title={`Listado (${participants.length})`}>

@@ -183,9 +183,13 @@ export function ParticipantForm({
           {/*
             Un checkbox sin marcar no se envía. Sin este campo espejo, marcar a
             alguien como inactivo no tendría efecto en el envío del formulario.
+            El orden importa: FormData.get() devuelve el PRIMER valor con ese
+            nombre en el orden del documento. El checkbox va primero para que,
+            si está marcado, su "true" gane; el campo oculto con "false" solo
+            se usa como respaldo cuando el checkbox no se envía (desmarcado).
           */}
-          <input type="hidden" name="active" value="false" />
           <Checkbox name="active" value="true" defaultChecked={editing.active} />
+          <input type="hidden" name="active" value="false" />
           Participante activo
         </label>
       )}
