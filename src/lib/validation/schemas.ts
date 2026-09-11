@@ -151,8 +151,11 @@ export const sportSchema = z
     maxTeamsPerGroup: z.coerce.number().int().min(1).max(20),
     maxSportsPerParticipant: z.coerce.number().int().min(1).max(20),
     deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
-    // Vacío = hereda la tarifa general del tipo de deporte.
-    fee: z.union([z.coerce.number().min(0), z.literal('')]).optional(),
+    // Vacío = hereda la tarifa general del tipo de deporte. El orden del union
+    // importa: z.coerce.number() convierte '' en 0 y esa rama gana si va
+    // primero, así que la cadena vacía nunca llegaba a guardarse como "vacío"
+    // (quedaba como el número 0 en vez de heredar la tarifa general).
+    fee: z.union([z.literal(''), z.coerce.number().min(0)]).optional(),
     allowIntergroup: z.boolean().default(true),
     maxExternal: z.coerce.number().int().min(0).max(50),
     branchIds: z.array(z.string()).min(1, 'Selecciona al menos una rama.'),
@@ -411,8 +414,11 @@ export const sessionResultSchema = z.object({
     .array(
       z.object({
         participantId: z.uuid(),
-        // Vacío = sin marca todavía. No es lo mismo que un cero.
-        value: z.union([z.coerce.number(), z.literal('')]).optional(),
+        // Vacío = sin marca todavía. No es lo mismo que un cero. El literal('')
+        // va primero en el union: z.coerce.number() convierte '' en 0, así que
+        // si esa rama fuera primero ganaría siempre y "sin marca" se guardaría
+        // como un cero real (ver el mismo bug corregido en sportSchema.fee).
+        value: z.union([z.literal(''), z.coerce.number()]).optional(),
         disqualified: z.boolean().default(false),
       }),
     )
