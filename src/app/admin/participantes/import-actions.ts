@@ -47,7 +47,7 @@ export interface ImportPreview {
 async function loadContext(forceGroupId?: string) {
   const supabase = await createClient();
 
-  const [groups, { data: branches }, participants, regionalMembers] = await Promise.all([
+  const [groups, { data: branches }, participants, regionalMembers, { data: settings }] = await Promise.all([
     fetchAllRows((from, to) =>
       supabase.from('groups').select('id, code, name').eq('status', 'approved').range(from, to),
     ),
@@ -59,6 +59,7 @@ async function loadContext(forceGroupId?: string) {
         .select('scout_id, full_name, document, birthdate, gender, unit, function_name, status, enrollment_year')
         .range(from, to),
     ),
+    supabase.from('settings').select('event_starts_at').single(),
   ]);
 
   return {
@@ -86,6 +87,10 @@ async function loadContext(forceGroupId?: string) {
         },
       ]),
     ),
+    // La rama se deduce por la edad que la persona va a tener el día del
+    // evento, no la de hoy (la base de datos exige lo mismo al guardar). Si
+    // el evento no está configurado todavía, se usa la fecha de hoy.
+    eventDate: settings?.event_starts_at ? new Date(settings.event_starts_at) : new Date(),
     forceGroupId,
   };
 }

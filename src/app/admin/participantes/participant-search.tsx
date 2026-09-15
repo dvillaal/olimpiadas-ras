@@ -32,6 +32,16 @@ function normalize(value: string): string {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+type SortColumn = 'fullName' | 'groupName' | 'branch';
+
+const SORT_LABEL: Record<SortColumn, string> = {
+  fullName: 'Participante',
+  groupName: 'Grupo',
+  branch: 'Rama',
+};
+
+const collator = new Intl.Collator('es', { sensitivity: 'base' });
+
 /**
  * Búsqueda y filtrado en el cliente. Con unos pocos miles de filas es más ágil
  * que ir al servidor en cada tecla; si el evento creciera mucho, convendría
@@ -47,7 +57,18 @@ export function ParticipantSearch({
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState('');
   const [onlyActive, setOnlyActive] = useState(false);
+  const [sortBy, setSortBy] = useState<SortColumn>('fullName');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const deferredQuery = useDeferredValue(query);
+
+  const toggleSort = (column: SortColumn) => {
+    if (column === sortBy) {
+      setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(column);
+      setSortDir('asc');
+    }
+  };
 
   const groups = useMemo(
     () => [...new Set(participants.map((p) => p.groupName))].sort(),
@@ -56,7 +77,7 @@ export function ParticipantSearch({
 
   const visible = useMemo(() => {
     const needle = normalize(deferredQuery.trim());
-    return participants.filter((p) => {
+    const filtered = participants.filter((p) => {
       if (onlyActive && !p.active) return false;
       if (group && p.groupName !== group) return false;
       if (!needle) return true;
@@ -66,7 +87,11 @@ export function ParticipantSearch({
         normalize(p.groupCode).includes(needle)
       );
     });
-  }, [participants, deferredQuery, group, onlyActive]);
+
+    const sorted = [...filtered].sort((a, b) => collator.compare(a[sortBy], b[sortBy]));
+    if (sortDir === 'desc') sorted.reverse();
+    return sorted;
+  }, [participants, deferredQuery, group, onlyActive, sortBy, sortDir]);
 
   return (
     <div>
@@ -112,9 +137,20 @@ export function ParticipantSearch({
           <table className="data-table">
             <thead>
               <tr>
-                <th>Participante</th>
-                <th>Grupo</th>
-                <th>Rama</th>
+                {(['fullName', 'groupName', 'branch'] as SortColumn[]).map((column) => (
+                  <th key={column} aria-sort={sortBy === column ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort(column)}
+                      className="flex cursor-pointer items-center gap-1 text-inherit"
+                    >
+                      {SORT_LABEL[column]}
+                      <span aria-hidden className="text-slate-400">
+                        {sortBy === column ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                      </span>
+                    </button>
+                  </th>
+                ))}
                 <th className="text-right">Edad</th>
                 <th>Documento</th>
                 <th>Estado</th>

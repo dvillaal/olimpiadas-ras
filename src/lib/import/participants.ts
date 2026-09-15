@@ -92,6 +92,14 @@ export interface ImportContext {
   regionalMembers?: ReadonlyMap<number, RegionalMemberLookup>;
   /** Ramas con su rango de edad, para deducir la rama cuando falte en el archivo. */
   branchAgeRanges?: readonly AgeBracket[];
+  /**
+   * Fecha del evento (`settings.event_starts_at`). La rama se deduce por la
+   * edad que la persona va a tener EN el evento, no la de hoy: alguien puede
+   * calzar hoy en una rama y cumplir años antes del evento, quedando en otra
+   * (la base de datos exige lo mismo al guardar). Si no está configurada,
+   * se usa la fecha de hoy.
+   */
+  eventDate?: Date;
 }
 
 export const DOC_TYPE_OPTIONS = ['RC', 'TI', 'CC', 'CE', 'PA', 'PEP'] as const;
@@ -419,7 +427,7 @@ export function validateRows(rows: readonly RawRow[], context: ImportContext): I
       branchId = branchFromRole(effectiveRegional.unit, effectiveRegional.functionName);
     }
     if (!branchId && birthdate && context.branchAgeRanges) {
-      const candidates = branchesForAge(birthdate, context.branchAgeRanges);
+      const candidates = branchesForAge(birthdate, context.branchAgeRanges, context.eventDate);
       if (candidates.length === 1 && candidates[0]) branchId = candidates[0].id;
     }
     if (!branchId) {

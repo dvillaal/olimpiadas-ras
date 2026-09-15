@@ -467,6 +467,66 @@ describe('validateRows con cruce regional (por Id Scout)', () => {
   });
 });
 
+/**
+ * La rama se deduce por la edad que la persona va a tener EL DÍA DEL EVENTO,
+ * no la de hoy: alguien puede calzar hoy en una rama y cumplir años antes del
+ * evento, quedando en otra (la base de datos exige lo mismo al guardar, vía
+ * el disparador `tg_participant_branch_age`).
+ */
+describe('validateRows deduce la rama por la edad en la fecha del evento, no la de hoy', () => {
+  const row = (overrides: Record<string, string> = {}) => ({
+    row: 2,
+    values: {
+      CODIGO_GRUPO: 'GS-001',
+      NOMBRES: 'Isaac Oliveros',
+      APELLIDOS: 'Badillo',
+      NUMERO_DOCUMENTO: '1065860735',
+      ...overrides,
+    },
+  });
+
+  const branchAgeRanges = [
+    { id: 'cachorros', name: 'Cachorros', min_age: 5, max_age: 6 },
+    { id: 'lobatos', name: 'Lobatos', min_age: 7, max_age: 10 },
+  ];
+  const ageContext: ImportContext = {
+    ...context,
+    branchIds: new Set(['cachorros', 'lobatos']),
+    branchAgeRanges,
+  };
+
+  it('sin fecha de evento configurada, usa la edad de hoy', () => {
+    // Nació hace 6 años y unos días: hoy tiene 6, todavía en cachorros.
+    const sixYearsAgo = new Date();
+    sixYearsAgo.setFullYear(sixYearsAgo.getFullYear() - 6);
+    sixYearsAgo.setDate(sixYearsAgo.getDate() - 5);
+    const birthdate = sixYearsAgo.toISOString().slice(0, 10);
+
+    const result = validateRows([row({ FECHA_NACIMIENTO: birthdate })], ageContext);
+
+    expect(result.valid[0]?.branchId).toBe('cachorros');
+  });
+
+  it('con fecha de evento configurada, usa la edad que tendrá ese día', () => {
+    // Nació hace 6 años y 11 meses: hoy tiene 6, pero para un evento dentro
+    // de 2 meses ya cumplió 7 y le toca lobatos.
+    const almostSeven = new Date();
+    almostSeven.setFullYear(almostSeven.getFullYear() - 6);
+    almostSeven.setMonth(almostSeven.getMonth() - 11);
+    const birthdate = almostSeven.toISOString().slice(0, 10);
+
+    const eventDate = new Date();
+    eventDate.setMonth(eventDate.getMonth() + 2);
+
+    const result = validateRows(
+      [row({ FECHA_NACIMIENTO: birthdate })],
+      { ...ageContext, eventDate },
+    );
+
+    expect(result.valid[0]?.branchId).toBe('lobatos');
+  });
+});
+
 describe('branchFromRole (deducción de rama por cargo, igual que la herramienta externa)', () => {
   it('reconoce jefe de grupo o director de grupo por función', () => {
     expect(branchFromRole('GRUPO', 'JEFE DE GRUPO')).toBe('jefe-de-grupo');
