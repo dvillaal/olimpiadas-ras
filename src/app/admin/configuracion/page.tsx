@@ -5,6 +5,7 @@ import { formatDateTime } from '@/lib/utils';
 import { Badge, EmptyState, PageHeader, Panel } from '@/components/ui';
 import { SettingsForm } from './settings-form';
 import { AdminUserForm } from './admin-user-form';
+import { ResendAdminCredentialsButton } from './resend-admin-credentials-button';
 
 export const metadata: Metadata = { title: 'Configuración' };
 
@@ -66,9 +67,12 @@ export default async function AdminSettingsPage() {
                       <p className="truncate font-semibold text-navy">{admin.full_name}</p>
                       <p className="truncate text-xs text-slate-500">{admin.email}</p>
                     </div>
-                    <Badge tone={admin.admin_scope === 'full' ? 'green' : 'gray'}>
-                      {admin.admin_scope === 'full' ? 'Completo' : 'Limitado'}
-                    </Badge>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge tone={admin.admin_scope === 'full' ? 'green' : 'gray'}>
+                        {admin.admin_scope === 'full' ? 'Completo' : 'Limitado'}
+                      </Badge>
+                      <ResendAdminCredentialsButton adminId={admin.id} />
+                    </div>
                   </li>
                 ))}
               </ul>

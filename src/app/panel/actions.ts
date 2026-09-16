@@ -86,16 +86,27 @@ export async function saveTeamAction(_prev: ActionState, formData: FormData): Pr
   if (input.id) {
     // Al editar, el nombre no cambia: ni la rama del deporte ni el país del
     // grupo pueden variar después de creado (`sportId` es fijo en el
-    // formulario de edición), así que no hay nada que recalcular.
+    // formulario de edición), así que no hay nada que recalcular. Antes esto
+    // se hacía con un UPDATE vacío (solo para confirmar dueño) y `.single()`;
+    // si el equipo ya no existía o cambió de dueño, PostgREST devolvía 0
+    // filas y `.single()` reventaba con un error críptico de Postgres
+    // directo en pantalla. Ahora es un SELECT (no muta nada) con
+    // `.maybeSingle()`, y si no aparece se explica en español qué pasó.
     const result = await supabase
       .from('teams')
-      .update({})
+      .select('id, name')
       .eq('id', input.id)
       .eq('owner_group_id', group.id)
-      .select('id, name')
-      .single();
+      .maybeSingle();
     team = result.data;
     teamError = result.error;
+    if (!teamError && !team) {
+      return {
+        errors: {
+          _: 'No encontramos ese equipo — puede que ya lo hayan borrado o que la página esté desactualizada. Recarga la página e inténtalo de nuevo.',
+        },
+      };
+    }
   } else {
     // Nombre fijo: Grupo · País · Rama, calculado con datos que el grupo no
     // puede manipular desde el formulario.

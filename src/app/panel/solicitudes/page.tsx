@@ -3,12 +3,13 @@ import { requireGroup } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { intergroupStatusView } from '@/lib/domain/status';
 import { formatRelative } from '@/lib/utils';
-import { Alert, Badge, StatusBadge } from '@/components/ui';
+import { Alert, Badge, Button, StatusBadge } from '@/components/ui';
 import { RealtimeRefresher } from '@/components/realtime-refresher';
 import { cardTitleClass } from '@/lib/fonts';
 import { NewRequestForm } from './new-request-form';
 import { ProposeForm } from './propose-form';
 import { ResolveButtons } from './resolve-buttons';
+import { cancelIntergroupRequestAction } from '../actions';
 
 export const metadata: Metadata = { title: 'Solicitudes intergrupales' };
 
@@ -165,9 +166,22 @@ export default async function GroupIntergroupPage() {
                       )}
 
                       {request.status === 'pending' && (
-                        <p className="text-sm text-white/70">
-                          Esperando que el otro grupo proponga participantes.
-                        </p>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm text-white/70">
+                            Esperando que el otro grupo proponga participantes.
+                          </p>
+                          <form action={cancelIntergroupRequestAction}>
+                            <input type="hidden" name="requestId" value={request.id} />
+                            <Button
+                              type="submit"
+                              size="sm"
+                              variant="ghost"
+                              className="!border-white/40 !text-white hover:!bg-white/10"
+                            >
+                              Cancelar solicitud
+                            </Button>
+                          </form>
+                        </div>
                       )}
                     </li>
                   );

@@ -115,3 +115,62 @@ export async function createAdminUserAction(
         + `Entrégale estos datos: ${input.email} · contraseña ${password}`,
   };
 }
+
+/**
+ * Reenvía las credenciales de un administrador generando una contraseña
+ * nueva. Mismo mecanismo que `resendCredentialsAction` usa para líderes de
+ * grupo (en admin/solicitudes/actions.ts), pero ese busca el perfil por
+ * `group_id` y los administradores no tienen grupo — por eso hacía falta
+ * esta versión aparte.
+ */
+export async function resendAdminCredentialsAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireFullAdmin();
+
+  const adminId = String(formData.get('adminId') ?? '');
+  if (!adminId) return { errors: { _: 'Falta el administrador.' } };
+
+  const admin = createAdminClient();
+
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('id, full_name, email, admin_scope')
+    .eq('id', adminId)
+    .eq('role', 'admin')
+    .maybeSingle();
+
+  if (!profile) {
+    return { errors: { _: 'No encontramos esa cuenta de administrador.' } };
+  }
+
+  const password = generateTemporaryPassword();
+
+  const { error } = await admin.auth.admin.updateUserById(profile.id, { password });
+  if (error) {
+    return { errors: { _: `No fue posible restablecer la contraseña: ${error.message}` } };
+  }
+
+  await admin.from('profiles').update({ must_change_password: true }).eq('id', profile.id);
+
+  const { data: settings } = await admin.from('settings').select('event_name').single();
+
+  const email = adminWelcomeEmail({
+    eventName: settings?.event_name ?? 'Olimpiadas Scouts',
+    adminName: profile.full_name,
+    email: profile.email,
+    password,
+    loginUrl: siteUrl('/ingresar'),
+    scope: profile.admin_scope,
+  });
+
+  const delivery = await sendEmail({ to: profile.email, ...email });
+
+  return {
+    ok: true,
+    message: delivery.ok
+      ? `Credenciales nuevas enviadas a ${profile.email}.`
+      : `Contraseña restablecida, pero el correo no salió. Nueva contraseña: ${password}`,
+  };
+}
