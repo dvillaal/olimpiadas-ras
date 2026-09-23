@@ -87,6 +87,8 @@ export async function reviewPaymentAction(
 
   revalidatePath('/admin/pagos');
   revalidatePath('/admin');
+  // También se revisa desde el acordeón de /admin/grupos ("Vista completa").
+  revalidatePath('/admin/grupos');
 
   const labels = {
     approved: 'Pago aprobado y notificado al grupo.',

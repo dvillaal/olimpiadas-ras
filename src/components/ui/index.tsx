@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import type { BadgeTone, StatusView } from '@/lib/domain/status';
 
+export { Modal } from './modal';
+
 /**
  * Componentes de interfaz compartidos.
  *
