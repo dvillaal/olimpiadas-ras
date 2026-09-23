@@ -3,8 +3,8 @@ import { requireAdmin, getSettings } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { formatCOP, sportFee } from '@/lib/domain/fees';
 import { registrationStatusView } from '@/lib/domain/status';
-import { Badge, EmptyState, PageHeader, Panel, StatCard, StatusBadge } from '@/components/ui';
-import { AdminEditTeamToggle } from './admin-edit-team-toggle';
+import { EmptyState, PageHeader, Panel, StatCard, StatusBadge } from '@/components/ui';
+import { TeamsFilterList, type TeamRow } from './teams-filter-list';
 
 export const metadata: Metadata = { title: 'Equipos' };
 
@@ -55,6 +55,88 @@ export default async function AdminTeamsPage() {
   const confirmed = teamRows.filter((t) => t.status === 'confirmed').length;
   const individualRows = individuals ?? [];
 
+  // Filas ya aplanadas para el listado con filtros (deporte, grupo, estado,
+  // búsqueda): se calcula todo aquí para que el componente cliente solo
+  // filtre y renderice, sin tener que volver a tocar la base.
+  const teamRowsForFilter: TeamRow[] = teamRows.map((team) => {
+    const sport = sportById.get(team.sport_id);
+    const roster = membersByTeam.get(team.id) ?? [];
+    const starters = roster.filter((m) => m.role === 'starter');
+    const substitutes = roster.filter((m) => m.role === 'substitute');
+    const owner = groupById.get(team.owner_group_id);
+    const external = roster.filter(
+      (m) => participantById.get(m.participant_id)?.group_id !== team.owner_group_id,
+    );
+
+    // Elegibles para editar: participantes activos del grupo dueño, más los
+    // externos ya presentes en la alineación (aportados por una alianza
+    // aceptada).
+    const ownParticipants = (participants ?? []).filter(
+      (p) => p.group_id === team.owner_group_id && p.active,
+    );
+    const externalInRoster = roster
+      .map((m) => participantById.get(m.participant_id))
+      .filter(
+        (p): p is NonNullable<typeof p> => Boolean(p) && p!.group_id !== team.owner_group_id,
+      );
+    const editParticipants = [
+      ...ownParticipants,
+      ...externalInRoster.filter((p) => !ownParticipants.some((o) => o.id === p.id)),
+    ].map((p) => ({
+      id: p.id,
+      fullName: p.full_name,
+      branch: branchName.get(p.branch_id) ?? p.branch_id,
+      groupId: p.group_id,
+    }));
+
+    return {
+      id: team.id,
+      name: team.name,
+      status: team.status,
+      sportId: team.sport_id,
+      sportName: sport?.name ?? '',
+      sportIcon: sport?.icon ?? '',
+      groupId: team.owner_group_id,
+      groupName: owner?.name ?? '—',
+      startersCount: starters.length,
+      teamSize: sport?.team_size ?? null,
+      substitutesCount: substitutes.length,
+      externalCount: external.length,
+      rosterBadges: roster.map((member) => ({
+        participantId: member.participant_id,
+        fullName: participantById.get(member.participant_id)?.full_name ?? '—',
+        role: member.role,
+        external: participantById.get(member.participant_id)?.group_id !== team.owner_group_id,
+      })),
+      valueLabel: sport ? formatCOP(sportFee(sport, settings)) : '—',
+      adminNote: team.admin_note,
+      edit: sport
+        ? {
+            sport: {
+              id: sport.id,
+              name: sport.name,
+              teamSize: sport.team_size,
+              substitutes: sport.substitutes,
+              allowIntergroup: sport.allow_intergroup,
+              maxExternal: sport.max_external,
+            },
+            participants: editParticipants,
+            initialStarters: starters.map((m) => m.participant_id),
+            initialSubstitutes: substitutes.map((m) => m.participant_id),
+          }
+        : null,
+    };
+  });
+
+  // Solo deportes/grupos que de verdad tienen equipos, para no llenar los
+  // filtros de opciones que no van a traer resultados.
+  const sportsWithTeams = [...new Map(teamRowsForFilter.map((t) => [t.sportId, t.sportName])).entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const groupsWithTeams = [...new Map(teamRowsForFilter.map((t) => [t.groupId, t.groupName])).entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <>
       <PageHeader
@@ -72,114 +154,7 @@ export default async function AdminTeamsPage() {
         {teamRows.length === 0 ? (
           <EmptyState icon="🤝" title="Todavía no hay equipos inscritos" />
         ) : (
-          <ul className="grid gap-4 lg:grid-cols-2">
-            {teamRows.map((team) => {
-              const sport = sportById.get(team.sport_id);
-              const roster = membersByTeam.get(team.id) ?? [];
-              const starters = roster.filter((m) => m.role === 'starter');
-              const substitutes = roster.filter((m) => m.role === 'substitute');
-              const owner = groupById.get(team.owner_group_id);
-              const external = roster.filter(
-                (m) => participantById.get(m.participant_id)?.group_id !== team.owner_group_id,
-              );
-
-              // Elegibles para editar: participantes activos del grupo dueño,
-              // más los externos ya presentes en la alineación (aportados por
-              // una alianza aceptada).
-              const ownParticipants = (participants ?? []).filter(
-                (p) => p.group_id === team.owner_group_id && p.active,
-              );
-              const externalInRoster = roster
-                .map((m) => participantById.get(m.participant_id))
-                .filter(
-                  (p): p is NonNullable<typeof p> =>
-                    Boolean(p) && p!.group_id !== team.owner_group_id,
-                );
-              const editParticipants = [
-                ...ownParticipants,
-                ...externalInRoster.filter((p) => !ownParticipants.some((o) => o.id === p.id)),
-              ].map((p) => ({
-                id: p.id,
-                fullName: p.full_name,
-                branch: branchName.get(p.branch_id) ?? p.branch_id,
-                groupId: p.group_id,
-              }));
-
-              return (
-                <li key={team.id} className="rounded-2xl border border-line p-4">
-                  <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <h4 className="font-bold text-navy">{team.name}</h4>
-                      <p className="text-sm text-slate-500">
-                        {sport?.icon} {sport?.name} · {owner?.name}
-                      </p>
-                    </div>
-                    <StatusBadge status={registrationStatusView(team.status)} />
-                  </div>
-
-                  <p className="mb-2 text-sm">
-                    <b className="text-navy">
-                      {starters.length}/{sport?.team_size ?? '?'}
-                    </b>{' '}
-                    titulares
-                    {substitutes.length > 0 && ` · ${substitutes.length} suplentes`}
-                    {external.length > 0 && (
-                      <Badge tone="blue" className="ml-2">
-                        {external.length} externo(s)
-                      </Badge>
-                    )}
-                  </p>
-
-                  <ul className="mb-3 flex flex-wrap gap-1.5">
-                    {roster.map((member) => {
-                      const participant = participantById.get(member.participant_id);
-                      const isExternal = participant?.group_id !== team.owner_group_id;
-                      return (
-                        <li key={member.participant_id}>
-                          <Badge tone={member.role === 'starter' ? 'green' : 'gray'}>
-                            {participant?.full_name ?? '—'}
-                            {isExternal && ' ↗'}
-                          </Badge>
-                        </li>
-                      );
-                    })}
-                  </ul>
-
-                  <p className="text-sm text-slate-500">
-                    Valor: {sport ? formatCOP(sportFee(sport, settings)) : '—'}
-                  </p>
-
-                  {team.admin_note && (
-                    <p className="mt-2 rounded-lg bg-canvas p-2 text-xs text-slate-600">
-                      {team.admin_note}
-                    </p>
-                  )}
-
-                  {sport && (
-                    <div className="mt-3">
-                      <AdminEditTeamToggle
-                        sport={{
-                          id: sport.id,
-                          name: sport.name,
-                          teamSize: sport.team_size,
-                          substitutes: sport.substitutes,
-                          allowIntergroup: sport.allow_intergroup,
-                          maxExternal: sport.max_external,
-                        }}
-                        participants={editParticipants}
-                        groupId={team.owner_group_id}
-                        groupName={owner?.name ?? '—'}
-                        teamId={team.id}
-                        initialName={team.name}
-                        initialStarters={starters.map((m) => m.participant_id)}
-                        initialSubstitutes={substitutes.map((m) => m.participant_id)}
-                      />
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <TeamsFilterList teams={teamRowsForFilter} sports={sportsWithTeams} groups={groupsWithTeams} />
         )}
       </Panel>
 

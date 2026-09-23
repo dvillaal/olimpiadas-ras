@@ -563,12 +563,26 @@ describe('ramas y edad', () => {
   });
 
   it('también valida al cambiar la rama de alguien ya registrado', async () => {
+    // Cachorros/Lobatos/Webelos/Scouts/Nómadas ya no restringen edad entre
+    // ellas (cambio de negocio deliberado: cualquier edad de 0 a 17 vale en
+    // cualquiera de las cinco). Rovers (18-21) y Adultos (22+) siguen
+    // validando estrictamente, así que la cobertura de "también valida al
+    // actualizar, no solo al insertar" se mueve ahí.
     const group = await newGroup('Cambio Rama', 'cambiorama@ejemplo.com');
     const id = await newParticipant(group, '9120001', 'scouts');
 
     await expect(
+      db.query(`update public.participants set branch_id = 'rovers' where id = $1`, [id]),
+    ).rejects.toThrow(/Rovers/i);
+  });
+
+  it('ya no restringe edad entre las ramas juveniles', async () => {
+    const group = await newGroup('Sin Restriccion Juvenil', 'sinrestriccion@ejemplo.com');
+    const id = await newParticipant(group, '9120002', 'scouts');
+
+    await expect(
       db.query(`update public.participants set branch_id = 'cachorros' where id = $1`, [id]),
-    ).rejects.toThrow(/Cachorros/i);
+    ).resolves.toBeDefined();
   });
 
   it('conserva las equivalencias de las ramas antiguas', async () => {
