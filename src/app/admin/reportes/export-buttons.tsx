@@ -18,6 +18,7 @@ export interface ExportData {
   participantes: Row[];
   pagos: Row[];
   equipos: Row[];
+  individuales: Row[];
   grupos: Row[];
   programacion: Row[];
   resultados: Row[];
@@ -70,6 +71,7 @@ export function ExportButtons({ data, eventName }: { data: ExportData; eventName
         ['grupos', 'Grupos'],
         ['participantes', 'Participantes'],
         ['equipos', 'Equipos'],
+        ['individuales', 'Deportes individuales'],
         ['pagos', 'Pagos'],
         ['programacion', 'Programación'],
         ['resultados', 'Resultados'],
@@ -125,6 +127,9 @@ export function ExportButtons({ data, eventName }: { data: ExportData; eventName
       </Button>
       <Button type="button" size="sm" variant="ghost" onClick={() => exportCsv('equipos')}>
         CSV equipos
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={() => exportCsv('individuales')}>
+        CSV individuales
       </Button>
       <Button type="button" size="sm" variant="ghost" onClick={() => exportCsv('programacion')}>
         CSV programación

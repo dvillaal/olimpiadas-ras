@@ -47,6 +47,8 @@ export default async function AdminReportsPage() {
 
   const groupById = new Map(groupRows.map((g) => [g.id, g]));
   const branchName = new Map((branches ?? []).map((b) => [b.id, b.name]));
+  const participantById = new Map(participantRows.map((p) => [p.id, p]));
+  const individualRegistrationById = new Map((individuals ?? []).map((r) => [r.id, r]));
 
   // ─── Recaudo ──────────────────────────────────────────────────────────────
   const approvedPayments = paymentRows.filter((p) => p.status === 'approved');
@@ -157,6 +159,20 @@ export default async function AdminReportsPage() {
         SUPLENTES: roster.filter((m) => m.role === 'substitute').length,
         VALOR: sport ? sportFee(sport, settings) : 0,
         ESTADO: t.status,
+      };
+    }),
+    individuales: (individualParticipants ?? []).map((link) => {
+      const registration = individualRegistrationById.get(link.registration_id);
+      const participant = participantById.get(link.participant_id);
+      const sport = registration ? sportRows.find((s) => s.id === registration.sport_id) : undefined;
+      return {
+        GRUPO: participant ? (groupById.get(participant.group_id)?.name ?? '') : '',
+        CODIGO_GRUPO: participant ? (groupById.get(participant.group_id)?.code ?? '') : '',
+        DEPORTE: sport?.name ?? '',
+        PARTICIPANTE: participant ? `${participant.first_names} ${participant.last_names}` : '',
+        RAMA: participant ? (branchName.get(participant.branch_id) ?? participant.branch_id) : '',
+        VALOR: sport ? sportFee(sport, settings) : 0,
+        ESTADO: registration?.status ?? '',
       };
     }),
     grupos: progressRows.map((g) => ({
