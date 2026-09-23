@@ -92,6 +92,7 @@ export function PaymentReviewCard({
   const [mode, setMode] = useState<'idle' | 'reject' | 'correction'>('idle');
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [loadingProof, startLoadingProof] = useTransition();
+  const [downloadingProof, startDownloadingProof] = useTransition();
   const toast = useToast();
 
   useEffect(() => {
@@ -115,6 +116,19 @@ export function PaymentReviewCard({
         return;
       }
       setProofUrl(url);
+      window.open(url, '_blank', 'noopener');
+    });
+  };
+
+  const downloadProof = () => {
+    startDownloadingProof(async () => {
+      // Enlace aparte con `download: true`: el navegador lo baja en vez de
+      // abrirlo en una pestaña (el que ya se guardó en `proofUrl` es para ver).
+      const url = await getProofUrlAction(payment.proofPath, { download: true });
+      if (!url) {
+        toast.error('No fue posible descargar el comprobante.');
+        return;
+      }
       window.open(url, '_blank', 'noopener');
     });
   };
@@ -184,6 +198,15 @@ export function PaymentReviewCard({
         </div>
         <Button type="button" size="sm" variant="secondary" onClick={openProof} disabled={loadingProof}>
           {loadingProof ? 'Abriendo…' : 'Ver comprobante'}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={downloadProof}
+          disabled={downloadingProof}
+        >
+          {downloadingProof ? 'Descargando…' : '⬇ Descargar'}
         </Button>
       </div>
 

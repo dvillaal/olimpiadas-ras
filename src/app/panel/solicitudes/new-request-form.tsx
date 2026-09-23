@@ -72,7 +72,7 @@ export function NewRequestForm({
         >
           {teams.map((option) => (
             <option key={option.id} value={option.id} className="text-navy">
-              {option.name} · faltan {option.missing}
+              {option.name} · {option.missing} cupo(s) libre(s)
             </option>
           ))}
         </select>
@@ -111,7 +111,7 @@ export function NewRequestForm({
         error={errors.slots}
         hint={
           team
-            ? `Faltan ${team.missing} titular(es) y el deporte admite hasta ${team.maxExternal} externo(s).`
+            ? `Tienes ${team.missing} cupo(s) libre(s) (titular o suplente) y el deporte admite hasta ${team.maxExternal} externo(s).`
             : undefined
         }
         required

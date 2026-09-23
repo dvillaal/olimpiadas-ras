@@ -537,11 +537,20 @@ export async function setGroupStatusAction(formData: FormData): Promise<void> {
   revalidatePath('/admin/grupos');
 }
 
-/** Enlace firmado y temporal para ver un comprobante del bucket privado. */
-export async function getProofUrlAction(proofPath: string): Promise<string | null> {
+/**
+ * Enlace firmado y temporal para ver (o descargar) un comprobante del
+ * bucket privado. Con `download: true` el navegador lo baja como archivo en
+ * vez de abrirlo en una pestaña nueva.
+ */
+export async function getProofUrlAction(
+  proofPath: string,
+  options?: { download?: boolean },
+): Promise<string | null> {
   await requireAdmin();
   const admin = createAdminClient();
 
-  const { data } = await admin.storage.from('comprobantes').createSignedUrl(proofPath, 300);
+  const { data } = await admin.storage
+    .from('comprobantes')
+    .createSignedUrl(proofPath, 300, options?.download ? { download: true } : undefined);
   return data?.signedUrl ?? null;
 }

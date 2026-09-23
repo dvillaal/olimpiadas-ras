@@ -48,7 +48,10 @@ export default async function GroupIntergroupPage() {
   const sent = rows.filter((r) => r.requester_group_id === group.id);
   const received = rows.filter((r) => r.target_group_id === group.id);
 
-  // Equipos propios incompletos: los únicos que justifican pedir apoyo.
+  // Equipos propios incompletos: los únicos que justifican pedir apoyo. Un
+  // equipo puede tener los titulares completos pero todavía le falten
+  // suplentes (hasta team_size + substitutes en total), así que ambos cupos
+  // cuentan — no solo los titulares.
   const incompleteTeams = (teams ?? [])
     .filter((team) => team.owner_group_id === group.id)
     .map((team) => {
@@ -56,12 +59,17 @@ export default async function GroupIntergroupPage() {
       const starters = (teamMembers ?? []).filter(
         (m) => m.team_id === team.id && m.role === 'starter',
       ).length;
+      const substitutes = (teamMembers ?? []).filter(
+        (m) => m.team_id === team.id && m.role === 'substitute',
+      ).length;
+      const missingStarters = Math.max(0, (sport?.team_size ?? 0) - starters);
+      const missingSubstitutes = Math.max(0, (sport?.substitutes ?? 0) - substitutes);
       return {
         id: team.id,
         name: team.name,
         sportName: sport?.name ?? '',
         allowIntergroup: sport?.allow_intergroup ?? false,
-        missing: (sport?.team_size ?? 0) - starters,
+        missing: missingStarters + missingSubstitutes,
         maxExternal: sport?.max_external ?? 0,
       };
     })

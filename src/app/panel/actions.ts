@@ -621,13 +621,22 @@ export async function submitBulkPaymentAction(
   return { ok: true, message: `Pago enviado para revisión (${input.items.length} conceptos).` };
 }
 
-/** Enlace firmado para que el grupo vuelva a ver su propio comprobante. */
-export async function getOwnProofUrlAction(proofPath: string): Promise<string | null> {
+/**
+ * Enlace firmado para que el grupo vuelva a ver (o descargar) su propio
+ * comprobante. Con `download: true` el navegador lo baja como archivo en
+ * vez de abrirlo en una pestaña nueva.
+ */
+export async function getOwnProofUrlAction(
+  proofPath: string,
+  options?: { download?: boolean },
+): Promise<string | null> {
   const { group } = await requireGroup();
   if (!proofPath.startsWith(`${group.id}/`)) return null;
 
   const supabase = await createClient();
-  const { data } = await supabase.storage.from('comprobantes').createSignedUrl(proofPath, 300);
+  const { data } = await supabase.storage
+    .from('comprobantes')
+    .createSignedUrl(proofPath, 300, options?.download ? { download: true } : undefined);
   return data?.signedUrl ?? null;
 }
 
