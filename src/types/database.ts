@@ -530,6 +530,10 @@ export interface Database {
       };
       claim_country: { Args: { p_code: string }; Returns: Group };
       release_country: { Args: { p_group_id: string }; Returns: undefined };
+      get_or_create_individual_registration: {
+        Args: { p_group_id: string; p_sport_id: string };
+        Returns: IndividualRegistration;
+      };
       review_payment: {
         Args: { p_payment_id: string; p_status: PaymentStatus; p_note?: string };
         Returns: Payment;

@@ -138,7 +138,7 @@ export async function saveIndividualRegistrationAsAdminAction(
   await requireAdmin();
 
   const registrationId = String(formData.get('registrationId') ?? '');
-  const participantIds = formData.getAll('participantIds').map(String);
+  const participantIds = [...new Set(formData.getAll('participantIds').map(String))];
 
   if (!registrationId) return { errors: { _: 'Falta la inscripción.' } };
   if (participantIds.length === 0) {
@@ -147,19 +147,36 @@ export async function saveIndividualRegistrationAsAdminAction(
 
   const supabase = await createClient();
 
-  await supabase
+  // Diferencia contra lo que ya había, en vez de borrar todo y reinsertar
+  // todo: reseleccionar a alguien que ya estaba no debe intentar insertarlo
+  // de nuevo (chocaría contra la llave primaria — "Ese registro ya existe").
+  const { data: currentLinks } = await supabase
     .from('individual_registration_participants')
-    .delete()
+    .select('participant_id')
     .eq('registration_id', registrationId);
 
-  const { error } = await supabase.from('individual_registration_participants').insert(
-    participantIds.map((participantId) => ({
-      registration_id: registrationId,
-      participant_id: participantId,
-    })),
-  );
+  const currentIds = new Set((currentLinks ?? []).map((link) => link.participant_id));
+  const nextIds = new Set(participantIds);
+  const toRemove = [...currentIds].filter((id) => !nextIds.has(id));
+  const toAdd = [...nextIds].filter((id) => !currentIds.has(id));
 
-  if (error) return { errors: { _: friendlyError(error) } };
+  if (toRemove.length > 0) {
+    await supabase
+      .from('individual_registration_participants')
+      .delete()
+      .eq('registration_id', registrationId)
+      .in('participant_id', toRemove);
+  }
+
+  if (toAdd.length > 0) {
+    const { error } = await supabase.from('individual_registration_participants').insert(
+      toAdd.map((participantId) => ({
+        registration_id: registrationId,
+        participant_id: participantId,
+      })),
+    );
+    if (error) return { errors: { _: friendlyError(error) } };
+  }
 
   await supabase.rpc('log_audit', {
     p_action: 'Editó una inscripción individual desde el panel de administración',

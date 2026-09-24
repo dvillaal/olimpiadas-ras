@@ -209,58 +209,68 @@ export async function saveIndividualRegistrationAction(
   const supabase = await createClient();
 
   const sportId = String(formData.get('sportId') ?? '');
-  const participantIds = formData.getAll('participantIds').map(String);
+  const participantIds = [...new Set(formData.getAll('participantIds').map(String))];
 
   if (participantIds.length === 0) {
     return { errors: { participantIds: 'Selecciona al menos un participante.' } };
   }
 
-  // No se puede usar un simple upsert-con-status-fijo: si la inscripción ya
-  // existe y está 'confirmed' (pago aprobado), forzarla de vuelta a 'draft'
-  // borraría el rastro de que ya se pagó. Solo se fija 'draft' al crearla por
-  // primera vez; si ya existe, su estado no se toca aquí.
-  const { data: existing } = await supabase
-    .from('individual_registrations')
-    .select('id, status')
-    .eq('group_id', group.id)
-    .eq('sport_id', sportId)
-    .maybeSingle();
+  // "Buscar o crear" en un solo paso atómico en la base: hacerlo aquí en dos
+  // llamadas (SELECT y, si no existe, INSERT) deja una ventana de carrera —
+  // dos envíos casi al tiempo pueden ver ambos "no existe" y los dos intentan
+  // crear la fila, chocando contra la restricción única. Tampoco se puede
+  // usar un upsert-con-status-fijo normal: si la inscripción ya existe y
+  // está 'confirmed' (pago aprobado), forzarla de vuelta a 'draft' borraría
+  // el rastro de que ya se pagó — por eso la función solo fija 'draft' al
+  // crearla por primera vez y no toca el status si ya existía.
+  const { data: registration, error: registrationError } = await supabase.rpc(
+    'get_or_create_individual_registration',
+    { p_group_id: group.id, p_sport_id: sportId },
+  );
 
-  if (existing?.status === 'payment_pending') {
+  if (registrationError || !registration) {
+    return {
+      errors: { _: friendlyError(registrationError ?? { message: 'Error al guardar.' }) },
+    };
+  }
+
+  if (registration.status === 'payment_pending') {
     return {
       errors: { _: 'Esta inscripción está en revisión y no se puede editar mientras tanto.' },
     };
   }
 
-  let registration = existing;
-  if (!registration) {
-    const { data: created, error } = await supabase
-      .from('individual_registrations')
-      .insert({ group_id: group.id, sport_id: sportId, status: 'draft' })
-      .select('id, status')
-      .single();
-
-    if (error || !created) {
-      return { errors: { _: friendlyError(error ?? { message: 'Error al guardar.' }) } };
-    }
-    registration = created;
-  }
-
-  await supabase
+  // Diferencia contra lo que ya había, en vez de borrar todo y reinsertar
+  // todo: así reseleccionar a alguien que ya estaba no intenta insertarlo de
+  // nuevo (eso era lo que disparaba "Ese registro ya existe" — un choque
+  // contra la llave primaria al reinsertar a alguien que seguía ahí).
+  const { data: currentLinks } = await supabase
     .from('individual_registration_participants')
-    .delete()
+    .select('participant_id')
     .eq('registration_id', registration.id);
 
-  const { error: linkError } = await supabase
-    .from('individual_registration_participants')
-    .insert(
-      participantIds.map((participantId) => ({
+  const currentIds = new Set((currentLinks ?? []).map((link) => link.participant_id));
+  const nextIds = new Set(participantIds);
+  const toRemove = [...currentIds].filter((id) => !nextIds.has(id));
+  const toAdd = [...nextIds].filter((id) => !currentIds.has(id));
+
+  if (toRemove.length > 0) {
+    await supabase
+      .from('individual_registration_participants')
+      .delete()
+      .eq('registration_id', registration.id)
+      .in('participant_id', toRemove);
+  }
+
+  if (toAdd.length > 0) {
+    const { error: linkError } = await supabase.from('individual_registration_participants').insert(
+      toAdd.map((participantId) => ({
         registration_id: registration.id,
         participant_id: participantId,
       })),
     );
-
-  if (linkError) return { errors: { _: friendlyError(linkError) } };
+    if (linkError) return { errors: { _: friendlyError(linkError) } };
+  }
 
   revalidatePath('/panel/deportes');
   revalidatePath('/panel/pagos');
