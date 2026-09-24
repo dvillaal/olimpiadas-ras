@@ -451,28 +451,59 @@ export async function saveStandAction(_prev: ActionState, formData: FormData): P
   const input = parsed.data;
   const supabase = await createClient();
 
-  // Un grupo, un stand: se actualiza en lugar de crear otro. Corrige el error
-  // del prototipo, que borraba el stand antes de saber si el usuario seguiría.
-  const { error } = await supabase.from('stands').upsert(
-    {
-      group_id: group.id,
-      name: input.name,
-      responsible: input.responsible,
-      document: input.document ?? '',
-      phone: input.phone,
-      email: input.email || null,
-      products: input.products,
-      description: input.description,
-      notes: input.notes,
-    },
-    { onConflict: 'group_id' },
-  );
+  // Un grupo puede tener varios stands: si llega un id, se edita ESE stand
+  // (comprobando que sea suyo); si no llega, se crea uno nuevo. Ya no se usa
+  // upsert por group_id porque group_id dejó de ser único.
+  const payload = {
+    name: input.name,
+    responsible: input.responsible,
+    document: input.document ?? '',
+    phone: input.phone,
+    email: input.email || null,
+    products: input.products,
+    description: input.description,
+    notes: input.notes,
+  };
 
-  if (error) return { errors: { _: friendlyError(error) } };
+  if (input.id) {
+    const { data: owned, error: ownedError } = await supabase
+      .from('stands')
+      .select('id')
+      .eq('id', input.id)
+      .eq('group_id', group.id)
+      .maybeSingle();
+
+    if (!ownedError && !owned) {
+      return {
+        errors: {
+          _: 'No encontramos ese stand — puede que ya lo hayan borrado o que la página esté desactualizada. Recarga la página e inténtalo de nuevo.',
+        },
+      };
+    }
+
+    const { error } = await supabase.from('stands').update(payload).eq('id', input.id);
+    if (error) return { errors: { _: friendlyError(error) } };
+  } else {
+    const { error } = await supabase.from('stands').insert({ ...payload, group_id: group.id });
+    if (error) return { errors: { _: friendlyError(error) } };
+  }
 
   revalidatePath('/panel/stand');
   revalidatePath('/panel/pagos');
   return { ok: true, message: 'Solicitud de stand guardada.' };
+}
+
+export async function deleteStandAction(formData: FormData): Promise<void> {
+  const { group } = await requireGroup();
+  const supabase = await createClient();
+
+  await supabase
+    .from('stands')
+    .delete()
+    .eq('id', String(formData.get('id') ?? ''))
+    .eq('group_id', group.id);
+
+  revalidatePath('/panel/stand');
 }
 
 // ─── Pagos ───────────────────────────────────────────────────────────────────

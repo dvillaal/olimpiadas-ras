@@ -21,7 +21,7 @@ export default async function PanelHomePage() {
     { data: participants },
     { data: teams },
     { data: individuals },
-    { data: stand },
+    { data: stands },
     { data: payments },
     { data: notifications },
     { data: country },
@@ -29,7 +29,7 @@ export default async function PanelHomePage() {
     supabase.from('participants').select('id, active').eq('group_id', group.id),
     supabase.from('teams').select('id, name, status').eq('owner_group_id', group.id),
     supabase.from('individual_registrations').select('id, status, amount').eq('group_id', group.id),
-    supabase.from('stands').select('*').eq('group_id', group.id).maybeSingle(),
+    supabase.from('stands').select('*').eq('group_id', group.id).order('created_at'),
     supabase.from('payments').select('*').eq('group_id', group.id),
     supabase
       .from('notifications')
@@ -45,6 +45,7 @@ export default async function PanelHomePage() {
   const activeParticipants = (participants ?? []).filter((p) => p.active).length;
   const teamRows = teams ?? [];
   const individualRows = individuals ?? [];
+  const standRows = stands ?? [];
   const paymentRows = payments ?? [];
 
   const paid = paymentRows
@@ -301,8 +302,11 @@ export default async function PanelHomePage() {
                         <StatusBadge status={registrationStatusView(registration.status)} />
                       </li>
                     ))}
-                    {stand && (
-                      <li className="flex flex-wrap items-center gap-3 rounded-xl border border-white/25 p-3">
+                    {standRows.map((stand) => (
+                      <li
+                        key={stand.id}
+                        className="flex flex-wrap items-center gap-3 rounded-xl border border-white/25 p-3"
+                      >
                         <span className="min-w-0 flex-1 truncate font-semibold text-white">
                           🛍️ {stand.name}
                         </span>
@@ -311,7 +315,7 @@ export default async function PanelHomePage() {
                         </span>
                         <StatusBadge status={registrationStatusView(stand.status)} />
                       </li>
-                    )}
+                    ))}
                   </ul>
                 )}
               </div>

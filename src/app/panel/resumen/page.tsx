@@ -28,7 +28,7 @@ export default async function GroupSummaryPage() {
     { data: sports },
     { data: individuals },
     { data: individualLinks },
-    { data: stand },
+    { data: stands },
     { data: payments },
     { data: branches },
     { data: country },
@@ -39,7 +39,7 @@ export default async function GroupSummaryPage() {
     supabase.from('sports').select('*'),
     supabase.from('individual_registrations').select('*').eq('group_id', group.id),
     supabase.from('individual_registration_participants').select('*'),
-    supabase.from('stands').select('*').eq('group_id', group.id).maybeSingle(),
+    supabase.from('stands').select('*').eq('group_id', group.id).order('created_at'),
     supabase.from('payments').select('*').eq('group_id', group.id),
     supabase.from('branches').select('*'),
     group.country_code
@@ -53,6 +53,7 @@ export default async function GroupSummaryPage() {
 
   const teamRows = teams ?? [];
   const individualRows = individuals ?? [];
+  const standRows = stands ?? [];
   const paymentRows = payments ?? [];
   const activeParticipants = (participants ?? []).filter((p) => p.active);
 
@@ -71,9 +72,9 @@ export default async function GroupSummaryPage() {
     individualRows
       .filter((r) => r.status !== 'rejected' && r.status !== 'cancelled')
       .reduce((sum, r) => sum + Number(r.amount), 0) +
-    (stand && stand.status !== 'rejected' && stand.status !== 'cancelled'
-      ? Number(stand.amount)
-      : 0);
+    standRows
+      .filter((s) => s.status !== 'rejected' && s.status !== 'cancelled')
+      .reduce((sum, s) => sum + Number(s.amount), 0);
 
   const progress = computeGroupProgress({
     hasCountry: Boolean(group.country_code),
@@ -265,17 +266,23 @@ export default async function GroupSummaryPage() {
         )}
       </section>
 
-      {stand && (
+      {standRows.length > 0 && (
         <section className="rounded-3xl bg-plum p-5 text-white">
-          <h3 className={cardTitleClass}>Stand de ventas</h3>
-          <div className="mt-2 mb-2 flex flex-wrap items-center justify-between gap-2">
-            <b className="text-white">{stand.name}</b>
-            <StatusBadge status={registrationStatusView(stand.status)} />
-          </div>
-          <p className="text-sm text-white/80">{stand.products}</p>
-          <p className="mt-2 text-sm text-white/75">
-            Responsable: {stand.responsible} · {formatCOP(Number(stand.amount))}
-          </p>
+          <h3 className={`mb-3 ${cardTitleClass}`}>Stands de ventas ({standRows.length})</h3>
+          <ul className="space-y-3">
+            {standRows.map((stand) => (
+              <li key={stand.id} className="rounded-xl border border-white/20 bg-white/10 p-3.5">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <b className="text-white">{stand.name}</b>
+                  <StatusBadge status={registrationStatusView(stand.status)} />
+                </div>
+                <p className="text-sm text-white/80">{stand.products}</p>
+                <p className="mt-2 text-sm text-white/75">
+                  Responsable: {stand.responsible} · {formatCOP(Number(stand.amount))}
+                </p>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

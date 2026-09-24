@@ -32,7 +32,7 @@ export default async function GroupPaymentsPage() {
     { data: teamMembers },
     { data: sports },
     { data: individuals },
-    { data: stand },
+    { data: stands },
   ] = await Promise.all([
     supabase
       .from('payments')
@@ -43,7 +43,7 @@ export default async function GroupPaymentsPage() {
     supabase.from('team_members').select('team_id, role'),
     supabase.from('sports').select('*'),
     supabase.from('individual_registrations').select('*').eq('group_id', group.id),
-    supabase.from('stands').select('*').eq('group_id', group.id).maybeSingle(),
+    supabase.from('stands').select('*').eq('group_id', group.id),
   ]);
 
   const paymentRows = payments ?? [];
@@ -119,19 +119,20 @@ export default async function GroupPaymentsPage() {
     });
   }
 
-  if (
-    stand &&
-    requiresPayment(Number(stand.amount)) &&
-    !settled.has(`stand:${stand.id}`) &&
-    stand.status !== 'confirmed' &&
-    stand.status !== 'cancelled'
-  ) {
-    pending.push({
-      payableType: 'stand',
-      payableId: stand.id,
-      label: `Stand · ${stand.name}`,
-      amount: Number(stand.amount),
-    });
+  for (const stand of stands ?? []) {
+    if (
+      requiresPayment(Number(stand.amount)) &&
+      !settled.has(`stand:${stand.id}`) &&
+      stand.status !== 'confirmed' &&
+      stand.status !== 'cancelled'
+    ) {
+      pending.push({
+        payableType: 'stand',
+        payableId: stand.id,
+        label: `Stand · ${stand.name}`,
+        amount: Number(stand.amount),
+      });
+    }
   }
 
   const paid = paymentRows

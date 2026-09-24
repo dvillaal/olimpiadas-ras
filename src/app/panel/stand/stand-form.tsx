@@ -27,12 +27,15 @@ function SubmitButton({ editing }: { editing: boolean }) {
   );
 }
 
-export function StandForm({ stand }: { stand?: StandDraft }) {
+export function StandForm({ stand, id, onSaved }: { stand?: StandDraft; id?: string; onSaved?: () => void }) {
   const [state, formAction] = useActionState<ActionState, FormData>(saveStandAction, {});
   const toast = useToast();
 
   useEffect(() => {
-    if (state.ok && state.message) toast.success(state.message);
+    if (state.ok && state.message) {
+      toast.success(state.message);
+      onSaved?.();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.ok, state.message]);
 
@@ -46,6 +49,7 @@ export function StandForm({ stand }: { stand?: StandDraft }) {
 
   return (
     <form action={formAction} className="space-y-4" noValidate>
+      {id && <input type="hidden" name="id" value={id} />}
       {errors._ && <Alert tone="error">{errors._}</Alert>}
 
       <Field

@@ -124,15 +124,19 @@ export default async function AdminGroupsPage() {
       });
     }
 
-    const stand = (stands ?? []).find((s) => s.group_id === group.id);
-    if (
-      stand &&
-      requiresPayment(Number(stand.amount)) &&
-      !settled.has(`stand:${stand.id}`) &&
-      stand.status !== 'confirmed' &&
-      stand.status !== 'cancelled'
-    ) {
-      pendingConcepts.push({ concept: `Stand · ${stand.name}`, amount: Number(stand.amount), status: 'pending' });
+    for (const stand of (stands ?? []).filter((s) => s.group_id === group.id)) {
+      if (
+        requiresPayment(Number(stand.amount)) &&
+        !settled.has(`stand:${stand.id}`) &&
+        stand.status !== 'confirmed' &&
+        stand.status !== 'cancelled'
+      ) {
+        pendingConcepts.push({
+          concept: `Stand · ${stand.name}`,
+          amount: Number(stand.amount),
+          status: 'pending',
+        });
+      }
     }
 
     const concepts: ConceptRow[] = [

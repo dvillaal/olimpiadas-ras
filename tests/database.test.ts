@@ -391,8 +391,8 @@ describe('inscripciones individuales', () => {
 });
 
 describe('stands', () => {
-  it('permite un solo stand por grupo', async () => {
-    const group = await newGroup('Stand Único', 'standunico@ejemplo.com');
+  it('permite varios stands por el mismo grupo', async () => {
+    const group = await newGroup('Stand Múltiple', 'standmultiple@ejemplo.com');
 
     await db.query(
       `insert into public.stands (group_id, name, responsible) values ($1, 'Primero', 'Ana')`,
@@ -403,7 +403,13 @@ describe('stands', () => {
         `insert into public.stands (group_id, name, responsible) values ($1, 'Segundo', 'Ana')`,
         [group],
       ),
-    ).rejects.toThrow();
+    ).resolves.toBeDefined();
+
+    const { rows } = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.stands where group_id = $1`,
+      [group],
+    );
+    expect(rows[0]!.n).toBe(2);
   });
 
   it('toma el valor vigente de la configuración al crearse', async () => {
