@@ -77,6 +77,16 @@ export default async function AdminGroupsPage() {
         .map((p) => `${p.payable_type}:${p.payable_id}`),
     );
 
+    // Solo lo "en curso" (enviado o en corrección) bloquea volver a ofrecer
+    // el concepto: uno ya aprobado no debe impedir cobrar una diferencia
+    // posterior (equipos individuales a los que se les agregó gente después
+    // de confirmados — ver más abajo).
+    const openPayable = new Set(
+      groupPayments
+        .filter((p) => p.status === 'sent' || p.status === 'correction')
+        .map((p) => `${p.payable_type}:${p.payable_id}`),
+    );
+
     const pendingConcepts: ConceptRow[] = [];
 
     for (const team of (teams ?? []).filter((t) => t.owner_group_id === group.id)) {
@@ -90,13 +100,26 @@ export default async function AdminGroupsPage() {
     }
 
     for (const registration of (individuals ?? []).filter((r) => r.group_id === group.id)) {
-      const amount = Number(registration.amount);
-      if (!requiresPayment(amount)) continue;
-      if (settled.has(`individual:${registration.id}`)) continue;
-      if (registration.status === 'confirmed' || registration.status === 'cancelled') continue;
+      if (registration.status === 'cancelled') continue;
+
+      // `amount` se recalcula solo (tarifa × personas): si se agregó gente a
+      // una inscripción ya confirmada, lo que falta por pagar es la
+      // diferencia contra lo ya aprobado, no el total otra vez.
+      const alreadyApproved = groupPayments
+        .filter(
+          (p) => p.payable_type === 'individual' && p.payable_id === registration.id && p.status === 'approved',
+        )
+        .reduce((sum, p) => sum + Number(p.reported_amount), 0);
+      const owed = Number(registration.amount) - alreadyApproved;
+
+      if (!requiresPayment(owed)) continue;
+      if (openPayable.has(`individual:${registration.id}`)) continue;
+
       pendingConcepts.push({
-        concept: `Individual · ${sportById.get(registration.sport_id)?.name ?? 'Deporte'}`,
-        amount,
+        concept:
+          `Individual · ${sportById.get(registration.sport_id)?.name ?? 'Deporte'}` +
+          (alreadyApproved > 0 ? ' (diferencia por integrantes nuevos)' : ''),
+        amount: owed,
         status: 'pending',
       });
     }

@@ -215,17 +215,35 @@ export async function saveIndividualRegistrationAction(
     return { errors: { participantIds: 'Selecciona al menos un participante.' } };
   }
 
-  const { data: registration, error } = await supabase
+  // No se puede usar un simple upsert-con-status-fijo: si la inscripción ya
+  // existe y está 'confirmed' (pago aprobado), forzarla de vuelta a 'draft'
+  // borraría el rastro de que ya se pagó. Solo se fija 'draft' al crearla por
+  // primera vez; si ya existe, su estado no se toca aquí.
+  const { data: existing } = await supabase
     .from('individual_registrations')
-    .upsert(
-      { group_id: group.id, sport_id: sportId, status: 'draft' },
-      { onConflict: 'group_id,sport_id' },
-    )
-    .select('id')
-    .single();
+    .select('id, status')
+    .eq('group_id', group.id)
+    .eq('sport_id', sportId)
+    .maybeSingle();
 
-  if (error || !registration) {
-    return { errors: { _: friendlyError(error ?? { message: 'Error al guardar.' }) } };
+  if (existing?.status === 'payment_pending') {
+    return {
+      errors: { _: 'Esta inscripción está en revisión y no se puede editar mientras tanto.' },
+    };
+  }
+
+  let registration = existing;
+  if (!registration) {
+    const { data: created, error } = await supabase
+      .from('individual_registrations')
+      .insert({ group_id: group.id, sport_id: sportId, status: 'draft' })
+      .select('id, status')
+      .single();
+
+    if (error || !created) {
+      return { errors: { _: friendlyError(error ?? { message: 'Error al guardar.' }) } };
+    }
+    registration = created;
   }
 
   await supabase
@@ -246,6 +264,8 @@ export async function saveIndividualRegistrationAction(
 
   revalidatePath('/panel/deportes');
   revalidatePath('/panel/pagos');
+  revalidatePath('/admin/equipos');
+  revalidatePath('/admin/grupos');
   return { ok: true, message: 'Inscripción guardada.' };
 }
 

@@ -232,10 +232,12 @@ export default async function GroupSportsPage() {
                           branch: branchName.get(p.branch_id) ?? p.branch_id,
                         }))}
                         selectedIds={registeredIds}
-                        locked={
-                          myRegistration?.status === 'payment_pending' ||
-                          myRegistration?.status === 'confirmed'
-                        }
+                        // 'confirmed' ya no bloquea: se puede seguir agregando gente a una
+                        // inscripción con pago aprobado (el monto sube solo, y la diferencia
+                        // queda como un pago nuevo por hacer). Solo se bloquea mientras el
+                        // pago está 'payment_pending' (en revisión).
+                        locked={myRegistration?.status === 'payment_pending'}
+                        alreadyConfirmed={myRegistration?.status === 'confirmed'}
                       />
                     </div>
                   ) : slotsLeft === 0 ? (

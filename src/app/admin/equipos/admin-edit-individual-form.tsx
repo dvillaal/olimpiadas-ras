@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { saveIndividualRegistrationAction } from '../actions';
+import { saveIndividualRegistrationAsAdminAction } from './actions';
 import type { ActionState } from '@/app/(auth)/actions';
 import { Alert, Button, Checkbox } from '@/components/ui';
 import { useToast } from '@/components/toast';
@@ -18,53 +18,47 @@ function SubmitButton({ count, total }: { count: number; total: number }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending || count === 0}>
-      {pending
-        ? 'Guardando…'
-        : count === 0
-          ? 'Selecciona participantes'
-          : `Inscribir ${count} · ${formatCOP(total)}`}
+      {pending ? 'Guardando…' : `Guardar ${count} · ${formatCOP(total)}`}
     </Button>
   );
 }
 
-export function IndividualRegistrationForm({
-  sportId,
-  sportName,
+/**
+ * Editor de participantes de una inscripción individual, para el
+ * administrador. A diferencia del que usa el grupo, este no se bloquea
+ * cuando la inscripción ya está confirmada (pago aprobado) — el disparador
+ * de la base ya deja pasar el cambio solo para administradores. Si el monto
+ * sube (se agregó gente a una inscripción ya paga), la diferencia aparece
+ * sola como un concepto nuevo por pagar, tanto aquí como en el panel del
+ * grupo.
+ */
+export function AdminEditIndividualForm({
+  registrationId,
   fee,
   participants,
   selectedIds,
-  locked,
-  alreadyConfirmed,
+  onDone,
 }: {
-  sportId: string;
-  sportName: string;
+  registrationId: string;
   fee: number;
   participants: SelectableParticipant[];
   selectedIds: string[];
-  locked?: boolean;
-  /** Ya tiene un pago aprobado; agregar gente genera un pago nuevo por la diferencia. */
-  alreadyConfirmed?: boolean;
+  onDone?: () => void;
 }) {
   const [selected, setSelected] = useState<string[]>(selectedIds);
   const [state, formAction] = useActionState<ActionState, FormData>(
-    saveIndividualRegistrationAction,
+    saveIndividualRegistrationAsAdminAction,
     {},
   );
   const toast = useToast();
 
   useEffect(() => {
-    if (state.ok && state.message) toast.success(state.message);
+    if (state.ok && state.message) {
+      toast.success(state.message);
+      onDone?.();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.ok, state.message]);
-
-  if (locked) {
-    return (
-      <Alert tone="info">
-        La inscripción en {sportName} ya está en revisión y no admite cambios. Si necesitas
-        modificarla, escribe a la organización.
-      </Alert>
-    );
-  }
 
   const toggle = (id: string) =>
     setSelected((current) =>
@@ -73,41 +67,26 @@ export function IndividualRegistrationForm({
 
   return (
     <form action={formAction} className="space-y-3">
-      <input type="hidden" name="sportId" value={sportId} />
+      <input type="hidden" name="registrationId" value={registrationId} />
       {selected.map((id) => (
         <input key={id} type="hidden" name="participantIds" value={id} />
       ))}
 
-      {alreadyConfirmed && (
-        <Alert tone="info">
-          Esta inscripción ya tiene el pago aprobado. Si agregas a alguien más, no se cobra todo
-          de nuevo: solo se genera un pago aparte por la diferencia, en &ldquo;Pagos&rdquo;.
-        </Alert>
-      )}
-
       {state.errors?._ && <Alert tone="error">{state.errors._}</Alert>}
-      {state.errors?.participantIds && (
-        <Alert tone="error">{state.errors.participantIds}</Alert>
-      )}
+      {state.errors?.participantIds && <Alert tone="error">{state.errors.participantIds}</Alert>}
 
-      <ul className="scrollbar-dark max-h-56 space-y-1.5 overflow-y-auto rounded-xl border border-white/20 p-2">
+      <ul className="scrollbar-dark max-h-72 space-y-1.5 overflow-y-auto rounded-xl border border-line p-2">
         {participants.map((participant) => (
           <li key={participant.id}>
             <label
               className={`flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm transition-colors ${
-                selected.includes(participant.id) ? 'bg-white/15' : 'hover:bg-white/5'
+                selected.includes(participant.id) ? 'bg-scout-50' : 'hover:bg-slate-50'
               }`}
             >
-              <Checkbox
-                tone="dark"
-                checked={selected.includes(participant.id)}
-                onChange={() => toggle(participant.id)}
-              />
+              <Checkbox checked={selected.includes(participant.id)} onChange={() => toggle(participant.id)} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold text-white">
-                  {participant.fullName}
-                </span>
-                <span className="text-xs text-white/70">{participant.branch}</span>
+                <span className="block truncate font-semibold text-navy">{participant.fullName}</span>
+                <span className="text-xs text-slate-500">{participant.branch}</span>
               </span>
             </label>
           </li>

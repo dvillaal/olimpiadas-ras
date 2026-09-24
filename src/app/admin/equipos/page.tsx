@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { requireAdmin, getSettings } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { formatCOP, sportFee } from '@/lib/domain/fees';
-import { registrationStatusView } from '@/lib/domain/status';
-import { EmptyState, PageHeader, Panel, StatCard, StatusBadge } from '@/components/ui';
+import { EmptyState, PageHeader, Panel, StatCard } from '@/components/ui';
 import { TeamsFilterList, type TeamRow } from './teams-filter-list';
+import { IndividualRegistrationsTable, type IndividualRow } from './individual-registrations-table';
 
 export const metadata: Metadata = { title: 'Equipos' };
 
@@ -22,6 +22,7 @@ export default async function AdminTeamsPage() {
     { data: individuals },
     { data: individualParticipants },
     { data: branches },
+    { data: sportBranches },
   ] = await Promise.all([
     supabase.from('teams').select('*').order('created_at', { ascending: false }),
     supabase.from('team_members').select('*'),
@@ -31,6 +32,7 @@ export default async function AdminTeamsPage() {
     supabase.from('individual_registrations').select('*'),
     supabase.from('individual_registration_participants').select('*'),
     supabase.from('branches').select('id, name'),
+    supabase.from('sport_branches').select('sport_id, branch_id'),
   ]);
 
   const sportById = new Map((sports ?? []).map((s) => [s.id, s]));
@@ -44,10 +46,23 @@ export default async function AdminTeamsPage() {
   }
 
   const participantsByRegistration = new Map<string, number>();
+  const participantIdsByRegistration = new Map<string, string[]>();
   for (const link of individualParticipants ?? []) {
     participantsByRegistration.set(
       link.registration_id,
       (participantsByRegistration.get(link.registration_id) ?? 0) + 1,
+    );
+    participantIdsByRegistration.set(link.registration_id, [
+      ...(participantIdsByRegistration.get(link.registration_id) ?? []),
+      link.participant_id,
+    ]);
+  }
+
+  const branchIdsBySport = new Map<string, Set<string>>();
+  for (const link of sportBranches ?? []) {
+    branchIdsBySport.set(
+      link.sport_id,
+      new Set([...(branchIdsBySport.get(link.sport_id) ?? []), link.branch_id]),
     );
   }
 
@@ -128,6 +143,33 @@ export default async function AdminTeamsPage() {
     };
   });
 
+  // Filas de inscripciones individuales: participantes elegibles = activos
+  // del grupo dueño, con rama habilitada para ese deporte (mismo filtro que
+  // usa el grupo en /panel/deportes).
+  const individualRowsForTable: IndividualRow[] = individualRows.map((registration) => {
+    const sport = sportById.get(registration.sport_id);
+    const eligibleBranches = branchIdsBySport.get(registration.sport_id) ?? new Set<string>();
+    const eligibleParticipants = (participants ?? [])
+      .filter((p) => p.group_id === registration.group_id && p.active && eligibleBranches.has(p.branch_id))
+      .map((p) => ({
+        id: p.id,
+        fullName: p.full_name,
+        branch: branchName.get(p.branch_id) ?? p.branch_id,
+      }));
+
+    return {
+      id: registration.id,
+      groupName: groupById.get(registration.group_id)?.name ?? '—',
+      sportLabel: `${sport?.icon ?? ''} ${sport?.name ?? ''}`.trim(),
+      participantsCount: participantsByRegistration.get(registration.id) ?? 0,
+      amount: Number(registration.amount),
+      status: registration.status,
+      fee: sport ? sportFee(sport, settings) : 0,
+      eligibleParticipants,
+      selectedIds: participantIdsByRegistration.get(registration.id) ?? [],
+    };
+  });
+
   // Solo deportes/grupos que de verdad tienen equipos, para no llenar los
   // filtros de opciones que no van a traer resultados.
   const sportsWithTeams = [...new Map(teamRowsForFilter.map((t) => [t.sportId, t.sportName])).entries()]
@@ -162,41 +204,7 @@ export default async function AdminTeamsPage() {
         {individualRows.length === 0 ? (
           <EmptyState icon="🏅" title="Todavía no hay inscripciones individuales" />
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Grupo</th>
-                  <th>Deporte</th>
-                  <th className="text-right">Participantes</th>
-                  <th className="text-right">Valor</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {individualRows.map((registration) => (
-                  <tr key={registration.id}>
-                    <td className="font-semibold text-navy">
-                      {groupById.get(registration.group_id)?.name}
-                    </td>
-                    <td>
-                      {sportById.get(registration.sport_id)?.icon}{' '}
-                      {sportById.get(registration.sport_id)?.name}
-                    </td>
-                    <td className="text-right">
-                      {participantsByRegistration.get(registration.id) ?? 0}
-                    </td>
-                    <td className="whitespace-nowrap text-right">
-                      {formatCOP(Number(registration.amount))}
-                    </td>
-                    <td>
-                      <StatusBadge status={registrationStatusView(registration.status)} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <IndividualRegistrationsTable rows={individualRowsForTable} />
         )}
       </Panel>
     </>

@@ -56,6 +56,15 @@ export default async function GroupPaymentsPage() {
       .map((p) => `${p.payable_type}:${p.payable_id}`),
   );
 
+  // Solo los realmente "en curso" (enviado o en corrección) bloquean volver a
+  // ofrecer el concepto: uno aprobado no debe impedir cobrar una diferencia
+  // posterior (ver inscripciones individuales más abajo).
+  const openPayable = new Set(
+    paymentRows
+      .filter((p) => p.status === 'sent' || p.status === 'correction')
+      .map((p) => `${p.payable_type}:${p.payable_id}`),
+  );
+
   const pending: PendingConcept[] = [];
 
   for (const team of teams ?? []) {
@@ -86,16 +95,27 @@ export default async function GroupPaymentsPage() {
   }
 
   for (const registration of individuals ?? []) {
-    const amount = Number(registration.amount);
-    if (!requiresPayment(amount)) continue;
-    if (settled.has(`individual:${registration.id}`)) continue;
-    if (registration.status === 'confirmed' || registration.status === 'cancelled') continue;
+    if (registration.status === 'cancelled') continue;
+
+    // El monto se recalcula solo (tarifa × personas): si un administrador
+    // agregó gente a una inscripción YA confirmada, `amount` sube pero lo ya
+    // aprobado sigue aprobado — lo que falta por pagar es la diferencia, no
+    // el total otra vez.
+    const alreadyApproved = paymentRows
+      .filter((p) => p.payable_type === 'individual' && p.payable_id === registration.id && p.status === 'approved')
+      .reduce((sum, p) => sum + Number(p.reported_amount), 0);
+    const owed = Number(registration.amount) - alreadyApproved;
+
+    if (!requiresPayment(owed)) continue;
+    if (openPayable.has(`individual:${registration.id}`)) continue;
 
     pending.push({
       payableType: 'individual',
       payableId: registration.id,
-      label: `Individual · ${sportById.get(registration.sport_id)?.name ?? 'Deporte'}`,
-      amount,
+      label:
+        `Individual · ${sportById.get(registration.sport_id)?.name ?? 'Deporte'}` +
+        (alreadyApproved > 0 ? ' (diferencia por integrantes nuevos)' : ''),
+      amount: owed,
     });
   }
 

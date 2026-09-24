@@ -121,6 +121,59 @@ export async function saveTeamAsAdminAction(
   return { ok: true, message: `Equipo "${input.name}" actualizado.` };
 }
 
+/**
+ * Edición de una inscripción individual desde el administrador.
+ *
+ * A diferencia de `saveIndividualRegistrationAction` (panel/actions.ts), NO
+ * reinicia el `status` a 'draft' — así una inscripción ya confirmada (pago
+ * aprobado) se queda confirmada, y el disparador `individual_participants_*`
+ * (con el permiso especial para administradores) deja pasar el cambio. El
+ * monto (`amount`) se recalcula solo, vía disparador, según la nueva
+ * cantidad de personas.
+ */
+export async function saveIndividualRegistrationAsAdminAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const registrationId = String(formData.get('registrationId') ?? '');
+  const participantIds = formData.getAll('participantIds').map(String);
+
+  if (!registrationId) return { errors: { _: 'Falta la inscripción.' } };
+  if (participantIds.length === 0) {
+    return { errors: { participantIds: 'Selecciona al menos un participante.' } };
+  }
+
+  const supabase = await createClient();
+
+  await supabase
+    .from('individual_registration_participants')
+    .delete()
+    .eq('registration_id', registrationId);
+
+  const { error } = await supabase.from('individual_registration_participants').insert(
+    participantIds.map((participantId) => ({
+      registration_id: registrationId,
+      participant_id: participantId,
+    })),
+  );
+
+  if (error) return { errors: { _: friendlyError(error) } };
+
+  await supabase.rpc('log_audit', {
+    p_action: 'Editó una inscripción individual desde el panel de administración',
+    p_entity_type: 'individual_registration',
+    p_entity_id: registrationId,
+  });
+
+  revalidatePath('/admin/equipos');
+  revalidatePath('/admin/grupos');
+  revalidatePath('/panel/deportes');
+  revalidatePath('/panel/pagos');
+  return { ok: true, message: 'Inscripción individual actualizada.' };
+}
+
 export async function deleteTeamAsAdminAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const supabase = await createClient();
