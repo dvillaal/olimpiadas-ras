@@ -41,6 +41,9 @@ export type ScheduleType = 'match' | 'session';
 export type ScheduleStatus = 'scheduled' | 'in_progress' | 'finished' | 'cancelled';
 /** En unos deportes gana la marca más alta y en otros la más baja. */
 export type ResultOrder = 'asc' | 'desc';
+export type BracketFormat = 'elimination' | 'groups_knockout' | 'round_robin';
+/** 'draft' = molde listo, sin sortear. 'drawn' = equipos ya asignados. */
+export type BracketStatus = 'draft' | 'drawn' | 'finished';
 
 type Settings = {
   id: boolean;
@@ -215,15 +218,30 @@ type RefereeSport = {
   sport_id: string;
 };
 
+type Bracket = {
+  id: string;
+  sport_id: string;
+  branch_id: string;
+  format: BracketFormat;
+  status: BracketStatus;
+  team_count: number;
+  group_size: number | null;
+  advance_per_group: number | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type Schedule = {
   id: string;
   sport_id: string;
   branch_id: string;
   type: ScheduleType;
   label: string;
-  starts_on: string;
-  starts_at: string;
+  starts_on: string | null;
+  starts_at: string | null;
   venue: string;
+  court_id: string | null;
   referee_id: string | null;
   team_a_id: string | null;
   team_b_id: string | null;
@@ -234,6 +252,17 @@ type Schedule = {
   result_published: boolean;
   result_entered_by: string | null;
   result_updated_at: string | null;
+  // ─── Molde de llaves ────────────────────────────────────────────────────
+  bracket_id: string | null;
+  round_number: number | null;
+  round_name: string;
+  bracket_slot: number | null;
+  group_label: string;
+  team_a_slot: number | null;
+  team_b_slot: number | null;
+  advances_to_schedule_id: string | null;
+  advances_to_slot: 'a' | 'b' | null;
+  is_bye: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -499,10 +528,8 @@ export interface Database {
       court_sports: TableDef<CourtSport, CourtSport>;
       referees: TableDef<Referee, Insertable<Referee, 'id'>>;
       referee_sports: TableDef<RefereeSport, RefereeSport>;
-      schedules: TableDef<
-        Schedule,
-        Insertable<Schedule, 'sport_id' | 'branch_id' | 'type' | 'starts_on' | 'starts_at'>
-      >;
+      brackets: TableDef<Bracket, Insertable<Bracket, 'sport_id' | 'branch_id' | 'format' | 'team_count'>>;
+      schedules: TableDef<Schedule, Insertable<Schedule, 'sport_id' | 'branch_id' | 'type'>>;
       schedule_participants: TableDef<
         ScheduleParticipant,
         Insertable<ScheduleParticipant, 'schedule_id' | 'participant_id'>
@@ -589,6 +616,14 @@ export interface Database {
         };
         Returns: Payment[];
       };
+      schedulable_teams: {
+        Args: { p_sport_id: string; p_branch_id: string; p_include_pending?: boolean };
+        Returns: Team[];
+      };
+      schedulable_participants: {
+        Args: { p_sport_id: string; p_branch_id: string; p_include_pending?: boolean };
+        Returns: Participant[];
+      };
       accept_intergroup_proposal: { Args: { p_request_id: string }; Returns: undefined };
       review_intergroup_request: {
         Args: { p_request_id: string; p_approve: boolean; p_note?: string };
@@ -650,6 +685,8 @@ export interface Database {
       schedule_type: ScheduleType;
       schedule_status: ScheduleStatus;
       result_order: ResultOrder;
+      bracket_format: BracketFormat;
+      bracket_status: BracketStatus;
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -689,6 +726,7 @@ export type {
   CourtSport,
   Referee,
   RefereeSport,
+  Bracket,
   Schedule,
   ScheduleParticipant,
   PublicSchedule,

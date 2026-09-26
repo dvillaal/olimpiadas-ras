@@ -570,6 +570,87 @@ describe('canchas', () => {
   });
 });
 
+describe('llaves', () => {
+  it('una casilla de bye admite un solo lado real', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const bracket = await db.query<{ id: string }>(
+      `insert into public.brackets (sport_id, branch_id, format, team_count)
+       values ($1, 'scouts', 'elimination', 3) returning id`,
+      [sport],
+    );
+    const bracketId = bracket.rows[0]!.id;
+
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, bracket_id, round_number, bracket_slot, is_bye, team_a_slot)
+         values ($1, 'scouts', 'match', $2, 1, 1, true, 1)`,
+        [sport, bracketId],
+      ),
+    ).resolves.not.toThrow();
+  });
+
+  it('un bye no puede tener los dos equipos a la vez', async () => {
+    const group = await newGroup('Bye Dos Equipos', 'byedosequipos@ejemplo.com');
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const teamA = await db.query<{ id: string }>(
+      `insert into public.teams (owner_group_id, sport_id, name) values ($1, $2, 'Equipo Bye A') returning id`,
+      [group, sport],
+    );
+    const teamB = await db.query<{ id: string }>(
+      `insert into public.teams (owner_group_id, sport_id, name) values ($1, $2, 'Equipo Bye B') returning id`,
+      [group, sport],
+    );
+
+    await expect(
+      db.query(
+        `insert into public.schedules (sport_id, branch_id, type, is_bye, team_a_id, team_b_id)
+         values ($1, 'scouts', 'match', true, $2, $3)`,
+        [sport, teamA.rows[0]!.id, teamB.rows[0]!.id],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('no deja dos partidos a la misma hora en la misma cancha', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const court = await db.query<{ id: string }>(
+      `insert into public.courts (name) values ('Cancha Choque') returning id`,
+    );
+    const courtId = court.rows[0]!.id;
+
+    await db.query(
+      `insert into public.schedules (sport_id, branch_id, type, starts_on, starts_at, court_id)
+       values ($1, 'scouts', 'match', current_date, '10:00', $2)`,
+      [sport, courtId],
+    );
+
+    await expect(
+      db.query(
+        `insert into public.schedules (sport_id, branch_id, type, starts_on, starts_at, court_id)
+         values ($1, 'scouts', 'match', current_date, '10:00', $2)`,
+        [sport, courtId],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('una sola llave por combinación de deporte y rama', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    await db.query(
+      `insert into public.brackets (sport_id, branch_id, format, team_count)
+       values ($1, 'lobatos', 'round_robin', 4)`,
+      [sport],
+    );
+
+    await expect(
+      db.query(
+        `insert into public.brackets (sport_id, branch_id, format, team_count)
+         values ($1, 'lobatos', 'elimination', 4)`,
+        [sport],
+      ),
+    ).rejects.toThrow();
+  });
+});
+
 describe('tarifas', () => {
   it('sport_effective_fee hereda la tarifa general cuando el deporte no tiene propia', async () => {
     const sport = await idOf('sports', 'slug', 'ajedrez');
@@ -672,13 +753,33 @@ describe('competencias', () => {
     return result.rows[0]!.id;
   }
 
-  it('un partido exige dos equipos distintos', async () => {
+  it('un partido puede crearse sin equipos todavía (molde de una llave)', async () => {
     const sport = await idOf('sports', 'slug', 'futbol');
     await expect(
       db.query(
         `insert into public.schedules (sport_id, branch_id, type, starts_on, starts_at)
          values ($1, 'scouts', 'match', current_date, '09:00')`,
         [sport],
+      ),
+    ).resolves.not.toThrow();
+  });
+
+  it('un partido no puede enfrentar a un equipo consigo mismo', async () => {
+    const group = await newGroup('Partido Mismo Equipo', 'partidomismoequipo@ejemplo.com');
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const team = await db.query<{ id: string }>(
+      `insert into public.teams (owner_group_id, sport_id, name)
+       values ($1, $2, 'Equipo Solo') returning id`,
+      [group, sport],
+    );
+    const teamId = team.rows[0]!.id;
+
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, starts_on, starts_at, team_a_id, team_b_id)
+         values ($1, 'scouts', 'match', current_date, '09:00', $2, $2)`,
+        [sport, teamId],
       ),
     ).rejects.toThrow();
   });

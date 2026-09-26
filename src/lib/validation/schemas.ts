@@ -410,6 +410,43 @@ export const manualScheduleSchema = z
     }
   });
 
+// ─── Molde de llaves ─────────────────────────────────────────────────────────
+
+export const bracketSchema = z
+  .object({
+    sportId: z.uuid(),
+    branchId: z.string().trim().min(2),
+    format: z.enum(['elimination', 'groups_knockout', 'round_robin']),
+    teamCount: z.coerce.number().int().min(2, 'Hacen falta al menos 2 equipos.').max(256),
+    groupSize: z.coerce.number().int().min(2).max(64).optional(),
+    advancePerGroup: z.coerce.number().int().min(1).max(16).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.format === 'groups_knockout') {
+      if (!value.groupSize) {
+        ctx.addIssue({ code: 'custom', path: ['groupSize'], message: 'Indica el tamaño de grupo.' });
+      }
+      if (!value.advancePerGroup) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['advancePerGroup'],
+          message: 'Indica cuántos avanzan por grupo.',
+        });
+      }
+    }
+  });
+
+export type BracketInput = z.infer<typeof bracketSchema>;
+
+export const bracketSlotSchema = z.object({
+  scheduleId: z.uuid(),
+  date: z.union([z.string().regex(DATE), z.literal('')]).optional(),
+  time: z.union([z.string().regex(TIME), z.literal('')]).optional(),
+  courtId: z.union([z.uuid(), z.literal('')]).optional(),
+});
+
+export type BracketSlotInput = z.infer<typeof bracketSlotSchema>;
+
 // ─── Resultados ──────────────────────────────────────────────────────────────
 
 export const matchResultSchema = z.object({
