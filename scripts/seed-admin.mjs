@@ -12,7 +12,11 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 async function loadEnv() {
-  for (const file of ['.env.local', '.env']) {
+  // `.env.development.local` primero: es donde vive un proyecto de Supabase
+  // de pruebas (playground) cuando hay uno, igual que Next.js lo prioriza
+  // automáticamente al correr `next dev`. Así este script apunta al mismo
+  // sitio que la app sin tener que repetir la configuración.
+  for (const file of ['.env.development.local', '.env.local', '.env']) {
     try {
       const content = await readFile(join(process.cwd(), file), 'utf8');
       for (const line of content.split('\n')) {

@@ -46,6 +46,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/ramas', icon: '🌿', label: 'Ramas' },
     { href: '/admin/deportes', icon: '🏅', label: 'Deportes' },
     { href: '/admin/equipos', icon: '🤝', label: 'Equipos' },
+    { href: '/admin/canchas', icon: '🏟️', label: 'Canchas' },
     {
       href: '/admin/intergrupales',
       icon: '🔄',

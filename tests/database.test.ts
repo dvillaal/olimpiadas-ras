@@ -515,6 +515,61 @@ describe('pagos', () => {
   });
 });
 
+describe('canchas', () => {
+  it('no permite dos canchas con el mismo nombre (sin importar mayúsculas)', async () => {
+    await db.query(`insert into public.courts (name) values ('Cancha Central')`);
+    await expect(
+      db.query(`insert into public.courts (name) values ('cancha central')`),
+    ).rejects.toThrow();
+  });
+
+  it('admite varios deportes por cancha', async () => {
+    const futbol = await idOf('sports', 'slug', 'futbol');
+    const ajedrez = await idOf('sports', 'slug', 'ajedrez');
+
+    const court = await db.query<{ id: string }>(
+      `insert into public.courts (name) values ('Polideportivo') returning id`,
+    );
+    const courtId = court.rows[0]!.id;
+
+    await db.query(
+      `insert into public.court_sports (court_id, sport_id) values ($1, $2), ($1, $3)`,
+      [courtId, futbol, ajedrez],
+    );
+
+    const { rows } = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.court_sports where court_id = $1`,
+      [courtId],
+    );
+    expect(rows[0]!.n).toBe(2);
+  });
+
+  it('borrar el deporte también borra su relación con la cancha', async () => {
+    const sportRow = await db.query<{ id: string }>(
+      `insert into public.sports (slug, name, type) values ('cancha-temporal', 'Deporte temporal', 'group') returning id`,
+    );
+    const sportId = sportRow.rows[0]!.id;
+
+    const court = await db.query<{ id: string }>(
+      `insert into public.courts (name) values ('Cancha Auxiliar') returning id`,
+    );
+    const courtId = court.rows[0]!.id;
+
+    await db.query(`insert into public.court_sports (court_id, sport_id) values ($1, $2)`, [
+      courtId,
+      sportId,
+    ]);
+
+    await db.query(`delete from public.sports where id = $1`, [sportId]);
+
+    const { rows } = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.court_sports where court_id = $1`,
+      [courtId],
+    );
+    expect(rows[0]!.n).toBe(0);
+  });
+});
+
 describe('tarifas', () => {
   it('sport_effective_fee hereda la tarifa general cuando el deporte no tiene propia', async () => {
     const sport = await idOf('sports', 'slug', 'ajedrez');

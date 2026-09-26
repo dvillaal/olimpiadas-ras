@@ -187,6 +187,20 @@ type SportBranch = {
   branch_id: string;
 };
 
+type Court = {
+  id: string;
+  name: string;
+  notes: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type CourtSport = {
+  court_id: string;
+  sport_id: string;
+};
+
 type Referee = {
   id: string;
   phone: string;
@@ -481,6 +495,8 @@ export interface Database {
         IntergroupProposal,
         Insertable<IntergroupProposal, 'request_id' | 'participant_id'>
       >;
+      courts: TableDef<Court, Insertable<Court, 'name'>>;
+      court_sports: TableDef<CourtSport, CourtSport>;
       referees: TableDef<Referee, Insertable<Referee, 'id'>>;
       referee_sports: TableDef<RefereeSport, RefereeSport>;
       schedules: TableDef<
@@ -669,6 +685,8 @@ export type {
   Notification,
   AuditLog,
   EmailLog,
+  Court,
+  CourtSport,
   Referee,
   RefereeSport,
   Schedule,

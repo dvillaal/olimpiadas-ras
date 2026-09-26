@@ -332,6 +332,18 @@ export const refereeSchema = z.object({
 
 export type RefereeInput = z.infer<typeof refereeSchema>;
 
+// ─── Canchas ─────────────────────────────────────────────────────────────────
+
+export const courtSchema = z.object({
+  id: z.uuid().optional(),
+  name: trimmed(2, 60, 'El nombre'),
+  notes: optionalText(500),
+  sportIds: z.array(z.uuid()).min(1, 'Marca al menos un deporte que se juegue en esta cancha.'),
+  active: z.boolean().default(true),
+});
+
+export type CourtInput = z.infer<typeof courtSchema>;
+
 // ─── Administradores ─────────────────────────────────────────────────────────
 
 export const adminUserSchema = z.object({

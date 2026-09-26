@@ -8,6 +8,7 @@ import { sendEmail } from '@/lib/email/send';
 import { paymentReviewedEmail } from '@/lib/email/templates';
 import {
   branchSchema,
+  courtSchema,
   fieldErrors,
   participantSchema,
   reviewPaymentSchema,
@@ -394,6 +395,92 @@ export async function toggleSportAction(formData: FormData): Promise<void> {
     .eq('id', String(formData.get('id') ?? ''));
 
   revalidatePath('/admin/deportes');
+}
+
+// ─── Canchas ─────────────────────────────────────────────────────────────────
+
+export async function saveCourtAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin();
+
+  const parsed = courtSchema.safeParse({
+    id: formData.get('id') || undefined,
+    name: formData.get('name'),
+    notes: formData.get('notes') ?? '',
+    sportIds: formData.getAll('sportIds').map(String),
+    active: formData.getAll('active').includes('true'),
+  });
+
+  if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+
+  const input = parsed.data;
+  const supabase = await createClient();
+
+  const row = { name: input.name, notes: input.notes, active: input.active };
+
+  const { data: saved, error } = input.id
+    ? await supabase.from('courts').update(row).eq('id', input.id).select('id').single()
+    : await supabase.from('courts').insert(row).select('id').single();
+
+  if (error || !saved) {
+    return { errors: { _: friendlyError(error ?? { message: 'Error al guardar la cancha.' }) } };
+  }
+
+  // Se reemplaza el conjunto de deportes en vez de calcular diferencias: es
+  // una lista corta y así no hay que rastrear qué cambió.
+  await supabase.from('court_sports').delete().eq('court_id', saved.id);
+  await supabase
+    .from('court_sports')
+    .insert(input.sportIds.map((sportId) => ({ court_id: saved.id, sport_id: sportId })));
+
+  await supabase.rpc('log_audit', {
+    p_action: `${input.id ? 'Actualizó' : 'Creó'} la cancha ${input.name}`,
+    p_entity_type: 'court',
+    p_entity_id: saved.id,
+  });
+
+  revalidatePath('/admin/canchas');
+  return { ok: true, message: `Cancha "${input.name}" guardada.` };
+}
+
+export async function toggleCourtAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  await supabase
+    .from('courts')
+    .update({ active: formData.get('active') === 'true' })
+    .eq('id', String(formData.get('id') ?? ''));
+
+  revalidatePath('/admin/canchas');
+}
+
+/**
+ * Elimina una cancha por completo. Todavía no hay nada que referencie
+ * `courts` (la programación sigue usando el campo de texto libre `venue`),
+ * así que por ahora esto no tiene que comprobar dependencias — cuando los
+ * partidos empiecen a asociarse a una cancha, esta acción deberá bloquear el
+ * borrado igual que `deleteSportAction`/`deleteBranchAction`.
+ */
+export async function deleteCourtAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const id = String(formData.get('id') ?? '');
+  const { data: court } = await supabase.from('courts').select('name').eq('id', id).maybeSingle();
+
+  if (!court) return { errors: { _: 'Esa cancha ya no existe.' } };
+
+  const { error } = await supabase.from('courts').delete().eq('id', id);
+  if (error) return { errors: { _: friendlyError(error) } };
+
+  await supabase.rpc('log_audit', {
+    p_action: `Eliminó la cancha ${court.name}`,
+    p_entity_type: 'court',
+    p_entity_id: id,
+  });
+
+  revalidatePath('/admin/canchas');
+  return { ok: true, message: `Cancha "${court.name}" eliminada.` };
 }
 
 // ─── Participantes ───────────────────────────────────────────────────────────

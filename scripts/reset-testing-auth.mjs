@@ -23,7 +23,10 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 async function loadEnv() {
-  for (const file of ['.env.local', '.env']) {
+  // Mismo orden de prioridad que `seed-admin.mjs` y que Next.js: si existe un
+  // `.env.development.local` (proyecto de pruebas / playground), gana sobre
+  // `.env.local`.
+  for (const file of ['.env.development.local', '.env.local', '.env']) {
     try {
       const content = await readFile(join(process.cwd(), file), 'utf8');
       for (const line of content.split('\n')) {

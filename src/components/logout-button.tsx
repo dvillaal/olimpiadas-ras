@@ -9,8 +9,10 @@ function Inner({ tone }: { tone: 'light' | 'dark' }) {
     <button
       type="submit"
       disabled={pending}
+      title="Cerrar sesión"
       className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px]
-                 font-semibold transition-colors disabled:opacity-60 ${
+                 font-semibold transition-colors disabled:opacity-60
+                 lg:group-data-[collapsed=true]/sidebar:justify-center lg:group-data-[collapsed=true]/sidebar:gap-0 lg:group-data-[collapsed=true]/sidebar:px-0 ${
                    tone === 'dark'
                      ? 'text-navy/70 hover:bg-navy/10 hover:text-navy'
                      : 'text-white/75 hover:bg-white/10 hover:text-white'
@@ -30,7 +32,9 @@ function Inner({ tone }: { tone: 'light' | 'dark' }) {
         <path d="M16 17l5-5-5-5" />
         <path d="M21 12H9" />
       </svg>
-      {pending ? 'Saliendo…' : 'Cerrar sesión'}
+      <span className="lg:group-data-[collapsed=true]/sidebar:hidden">
+        {pending ? 'Saliendo…' : 'Cerrar sesión'}
+      </span>
     </button>
   );
 }
