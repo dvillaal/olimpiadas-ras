@@ -14,6 +14,7 @@ export interface SportListItem extends SportRow {
   fee: number | null;
   linkedBranchNames: string[];
   teamsCount: number;
+  athletesCount: number;
   deletable: boolean;
 }
 
@@ -284,7 +285,10 @@ export function SportManager({
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-slate-500">Inscritos</dt>
-                      <dd>{sport.teamsCount}</dd>
+                      <dd>
+                        {sport.athletesCount} deportista{sport.athletesCount === 1 ? '' : 's'}
+                        {sport.type === 'group' && ` · ${sport.teamsCount} equipos`}
+                      </dd>
                     </div>
                   </dl>
 

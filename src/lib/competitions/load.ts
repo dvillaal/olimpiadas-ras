@@ -71,8 +71,17 @@ export async function loadCompetitions(
   if (filter.sportId) query = query.eq('sport_id', filter.sportId);
   if (filter.branchId) query = query.eq('branch_id', filter.branchId);
 
-  const { data: schedules } = await query;
-  if (!schedules?.length) return [];
+  const { data: rawSchedules } = await query;
+
+  // El molde de una llave puede tener casillas sin fecha/hora todavía
+  // (esperando que el administrador las complete) o sin equipos (esperando
+  // el sorteo o el resultado de la ronda anterior): esta lista es la
+  // programación real, así que esas casillas no cuentan todavía.
+  const schedules = (rawSchedules ?? []).filter(
+    (s): s is typeof s & { starts_on: string; starts_at: string } =>
+      s.starts_on !== null && s.starts_at !== null,
+  );
+  if (!schedules.length) return [];
 
   const scheduleIds = schedules.map((s) => s.id);
   const teamIds = schedules.flatMap((s) => [s.team_a_id, s.team_b_id].filter(Boolean) as string[]);

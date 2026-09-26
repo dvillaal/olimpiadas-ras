@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -38,6 +39,16 @@ do $$ begin create role authenticated; exception when duplicate_object then null
 `;
 
 let db: PGlite;
+
+// Las extensiones las provee el servidor real de Supabase; aquí estorban.
+// btree_gist es la excepción: PGlite sí la trae (se carga al crear la
+// instancia), y hace falta de verdad para la restricción de exclusión que
+// evita choques de horario en una misma cancha.
+function stripExtensions(sql: string): string {
+  return sql.replace(/^\s*create\s+extension[^;]*;/gim, (match) =>
+    /btree_gist/i.test(match) ? match : '',
+  );
+}
 
 /** Los identificadores del seed cambian en cada corrida: se leen al vuelo. */
 async function idOf(table: string, column: string, value: string): Promise<string> {
@@ -101,24 +112,18 @@ async function newParticipant(
 }
 
 beforeAll(async () => {
-  db = await new PGlite();
+  db = await new PGlite({ extensions: { btree_gist } });
   await db.exec(STUBS);
 
   const dir = join(ROOT, 'supabase', 'migrations');
   const files = (await readdir(dir)).filter((f) => f.endsWith('.sql')).sort();
 
   for (const file of files) {
-    const sql = (await readFile(join(dir, file), 'utf8')).replace(
-      /^\s*create\s+extension[^;]*;/gim,
-      '',
-    );
+    const sql = stripExtensions(await readFile(join(dir, file), 'utf8'));
     await db.exec(sql);
   }
 
-  const seed = (await readFile(join(ROOT, 'supabase', 'seed.sql'), 'utf8')).replace(
-    /^\s*create\s+extension[^;]*;/gim,
-    '',
-  );
+  const seed = stripExtensions(await readFile(join(ROOT, 'supabase', 'seed.sql'), 'utf8'));
   await db.exec(seed);
 }, 60_000);
 
@@ -570,6 +575,126 @@ describe('canchas', () => {
   });
 });
 
+describe('llaves', () => {
+  it('una casilla de bye admite un solo lado real', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const bracket = await db.query<{ id: string }>(
+      `insert into public.brackets (sport_id, branch_id, format, team_count)
+       values ($1, 'scouts', 'elimination', 3) returning id`,
+      [sport],
+    );
+    const bracketId = bracket.rows[0]!.id;
+
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, bracket_id, round_number, bracket_slot, is_bye, team_a_slot)
+         values ($1, 'scouts', 'match', $2, 1, 1, true, 1)`,
+        [sport, bracketId],
+      ),
+    ).resolves.not.toThrow();
+  });
+
+  it('un bye no puede tener los dos equipos a la vez', async () => {
+    const group = await newGroup('Bye Dos Equipos', 'byedosequipos@ejemplo.com');
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const teamA = await db.query<{ id: string }>(
+      `insert into public.teams (owner_group_id, sport_id, name) values ($1, $2, 'Equipo Bye A') returning id`,
+      [group, sport],
+    );
+    const teamB = await db.query<{ id: string }>(
+      `insert into public.teams (owner_group_id, sport_id, name) values ($1, $2, 'Equipo Bye B') returning id`,
+      [group, sport],
+    );
+
+    await expect(
+      db.query(
+        `insert into public.schedules (sport_id, branch_id, type, is_bye, team_a_id, team_b_id)
+         values ($1, 'scouts', 'match', true, $2, $3)`,
+        [sport, teamA.rows[0]!.id, teamB.rows[0]!.id],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('exige que la hora de fin sea posterior a la de inicio', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, starts_on, starts_at, ends_at)
+         values ($1, 'scouts', 'match', current_date, '10:00', '09:00')`,
+        [sport],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('no deja dos partidos con horarios que se crucen en la misma cancha', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const court = await db.query<{ id: string }>(
+      `insert into public.courts (name) values ('Cancha Choque') returning id`,
+    );
+    const courtId = court.rows[0]!.id;
+
+    await db.query(
+      `insert into public.schedules
+         (sport_id, branch_id, type, starts_on, starts_at, ends_at, court_id)
+       values ($1, 'scouts', 'match', current_date, '10:00', '11:00', $2)`,
+      [sport, courtId],
+    );
+
+    // Empieza antes de que termine el anterior: se cruzan.
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, starts_on, starts_at, ends_at, court_id)
+         values ($1, 'scouts', 'match', current_date, '10:30', '11:30', $2)`,
+        [sport, courtId],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('sí deja dos partidos seguidos (uno termina justo cuando empieza el otro)', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const court = await db.query<{ id: string }>(
+      `insert into public.courts (name) values ('Cancha Consecutiva') returning id`,
+    );
+    const courtId = court.rows[0]!.id;
+
+    await db.query(
+      `insert into public.schedules
+         (sport_id, branch_id, type, starts_on, starts_at, ends_at, court_id)
+       values ($1, 'scouts', 'match', current_date, '10:00', '11:00', $2)`,
+      [sport, courtId],
+    );
+
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, starts_on, starts_at, ends_at, court_id)
+         values ($1, 'scouts', 'match', current_date, '11:00', '12:00', $2)`,
+        [sport, courtId],
+      ),
+    ).resolves.not.toThrow();
+  });
+
+  it('una sola llave por combinación de deporte y rama', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    await db.query(
+      `insert into public.brackets (sport_id, branch_id, format, team_count)
+       values ($1, 'lobatos', 'round_robin', 4)`,
+      [sport],
+    );
+
+    await expect(
+      db.query(
+        `insert into public.brackets (sport_id, branch_id, format, team_count)
+         values ($1, 'lobatos', 'elimination', 4)`,
+        [sport],
+      ),
+    ).rejects.toThrow();
+  });
+});
+
 describe('tarifas', () => {
   it('sport_effective_fee hereda la tarifa general cuando el deporte no tiene propia', async () => {
     const sport = await idOf('sports', 'slug', 'ajedrez');
@@ -672,13 +797,33 @@ describe('competencias', () => {
     return result.rows[0]!.id;
   }
 
-  it('un partido exige dos equipos distintos', async () => {
+  it('un partido puede crearse sin equipos todavía (molde de una llave)', async () => {
     const sport = await idOf('sports', 'slug', 'futbol');
     await expect(
       db.query(
         `insert into public.schedules (sport_id, branch_id, type, starts_on, starts_at)
          values ($1, 'scouts', 'match', current_date, '09:00')`,
         [sport],
+      ),
+    ).resolves.not.toThrow();
+  });
+
+  it('un partido no puede enfrentar a un equipo consigo mismo', async () => {
+    const group = await newGroup('Partido Mismo Equipo', 'partidomismoequipo@ejemplo.com');
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const team = await db.query<{ id: string }>(
+      `insert into public.teams (owner_group_id, sport_id, name)
+       values ($1, $2, 'Equipo Solo') returning id`,
+      [group, sport],
+    );
+    const teamId = team.rows[0]!.id;
+
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, starts_on, starts_at, team_a_id, team_b_id)
+         values ($1, 'scouts', 'match', current_date, '09:00', $2, $2)`,
+        [sport, teamId],
       ),
     ).rejects.toThrow();
   });

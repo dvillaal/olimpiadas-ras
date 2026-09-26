@@ -8,6 +8,7 @@
  * Uso: node scripts/validate-sql.mjs
  */
 import { PGlite } from '@electric-sql/pglite';
+import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,8 +57,13 @@ exception when duplicate_object then null; end $$;
 `;
 
 // Las extensiones las provee el servidor real de Supabase; aquí estorban.
+// btree_gist es la excepción: PGlite sí la trae (se carga más abajo al crear
+// la instancia), y la necesitamos de verdad para validar la restricción de
+// exclusión que evita choques de horario en una misma cancha.
 function stripExtensions(sql) {
-  return sql.replace(/^\s*create\s+extension[^;]*;/gim, '');
+  return sql.replace(/^\s*create\s+extension[^;]*;/gim, (match) =>
+    /btree_gist/i.test(match) ? match : '',
+  );
 }
 
 function fail(label, error, sql) {
@@ -76,7 +82,7 @@ process.on('uncaughtException', (e) => {
   process.exit(1);
 });
 
-const db = await new PGlite();
+const db = await new PGlite({ extensions: { btree_gist } });
 await db.exec(SUPABASE_STUBS);
 
 const migrationsDir = join(root, 'supabase', 'migrations');

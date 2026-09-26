@@ -55,6 +55,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     },
     { href: '/admin/arbitros', icon: '🧑‍⚖️', label: 'Árbitros' },
     { href: '/admin/programacion', icon: '🗓️', label: 'Programación' },
+    { href: '/admin/llaves', icon: '🏆', label: 'Llaves' },
     { href: '/admin/pagos', icon: '💳', label: 'Pagos', badge: pendingPayments ?? 0 },
     { href: '/admin/stands', icon: '🛍️', label: 'Stands', badge: pendingStands ?? 0 },
     { href: '/admin/reportes', icon: '📊', label: 'Reportes' },
