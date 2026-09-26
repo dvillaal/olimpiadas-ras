@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -38,6 +39,16 @@ do $$ begin create role authenticated; exception when duplicate_object then null
 `;
 
 let db: PGlite;
+
+// Las extensiones las provee el servidor real de Supabase; aquí estorban.
+// btree_gist es la excepción: PGlite sí la trae (se carga al crear la
+// instancia), y hace falta de verdad para la restricción de exclusión que
+// evita choques de horario en una misma cancha.
+function stripExtensions(sql: string): string {
+  return sql.replace(/^\s*create\s+extension[^;]*;/gim, (match) =>
+    /btree_gist/i.test(match) ? match : '',
+  );
+}
 
 /** Los identificadores del seed cambian en cada corrida: se leen al vuelo. */
 async function idOf(table: string, column: string, value: string): Promise<string> {
@@ -101,24 +112,18 @@ async function newParticipant(
 }
 
 beforeAll(async () => {
-  db = await new PGlite();
+  db = await new PGlite({ extensions: { btree_gist } });
   await db.exec(STUBS);
 
   const dir = join(ROOT, 'supabase', 'migrations');
   const files = (await readdir(dir)).filter((f) => f.endsWith('.sql')).sort();
 
   for (const file of files) {
-    const sql = (await readFile(join(dir, file), 'utf8')).replace(
-      /^\s*create\s+extension[^;]*;/gim,
-      '',
-    );
+    const sql = stripExtensions(await readFile(join(dir, file), 'utf8'));
     await db.exec(sql);
   }
 
-  const seed = (await readFile(join(ROOT, 'supabase', 'seed.sql'), 'utf8')).replace(
-    /^\s*create\s+extension[^;]*;/gim,
-    '',
-  );
+  const seed = stripExtensions(await readFile(join(ROOT, 'supabase', 'seed.sql'), 'utf8'));
   await db.exec(seed);
 }, 60_000);
 
@@ -611,7 +616,19 @@ describe('llaves', () => {
     ).rejects.toThrow();
   });
 
-  it('no deja dos partidos a la misma hora en la misma cancha', async () => {
+  it('exige que la hora de fin sea posterior a la de inicio', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, starts_on, starts_at, ends_at)
+         values ($1, 'scouts', 'match', current_date, '10:00', '09:00')`,
+        [sport],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('no deja dos partidos con horarios que se crucen en la misma cancha', async () => {
     const sport = await idOf('sports', 'slug', 'futbol');
     const court = await db.query<{ id: string }>(
       `insert into public.courts (name) values ('Cancha Choque') returning id`,
@@ -619,18 +636,45 @@ describe('llaves', () => {
     const courtId = court.rows[0]!.id;
 
     await db.query(
-      `insert into public.schedules (sport_id, branch_id, type, starts_on, starts_at, court_id)
-       values ($1, 'scouts', 'match', current_date, '10:00', $2)`,
+      `insert into public.schedules
+         (sport_id, branch_id, type, starts_on, starts_at, ends_at, court_id)
+       values ($1, 'scouts', 'match', current_date, '10:00', '11:00', $2)`,
+      [sport, courtId],
+    );
+
+    // Empieza antes de que termine el anterior: se cruzan.
+    await expect(
+      db.query(
+        `insert into public.schedules
+           (sport_id, branch_id, type, starts_on, starts_at, ends_at, court_id)
+         values ($1, 'scouts', 'match', current_date, '10:30', '11:30', $2)`,
+        [sport, courtId],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('sí deja dos partidos seguidos (uno termina justo cuando empieza el otro)', async () => {
+    const sport = await idOf('sports', 'slug', 'futbol');
+    const court = await db.query<{ id: string }>(
+      `insert into public.courts (name) values ('Cancha Consecutiva') returning id`,
+    );
+    const courtId = court.rows[0]!.id;
+
+    await db.query(
+      `insert into public.schedules
+         (sport_id, branch_id, type, starts_on, starts_at, ends_at, court_id)
+       values ($1, 'scouts', 'match', current_date, '10:00', '11:00', $2)`,
       [sport, courtId],
     );
 
     await expect(
       db.query(
-        `insert into public.schedules (sport_id, branch_id, type, starts_on, starts_at, court_id)
-         values ($1, 'scouts', 'match', current_date, '10:00', $2)`,
+        `insert into public.schedules
+           (sport_id, branch_id, type, starts_on, starts_at, ends_at, court_id)
+         values ($1, 'scouts', 'match', current_date, '11:00', '12:00', $2)`,
         [sport, courtId],
       ),
-    ).rejects.toThrow();
+    ).resolves.not.toThrow();
   });
 
   it('una sola llave por combinación de deporte y rama', async () => {

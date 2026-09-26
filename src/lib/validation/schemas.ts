@@ -438,12 +438,26 @@ export const bracketSchema = z
 
 export type BracketInput = z.infer<typeof bracketSchema>;
 
-export const bracketSlotSchema = z.object({
-  scheduleId: z.uuid(),
-  date: z.union([z.string().regex(DATE), z.literal('')]).optional(),
-  time: z.union([z.string().regex(TIME), z.literal('')]).optional(),
-  courtId: z.union([z.uuid(), z.literal('')]).optional(),
-});
+export const bracketSlotSchema = z
+  .object({
+    scheduleId: z.uuid(),
+    time: z.union([z.string().regex(TIME), z.literal('')]).optional(),
+    endTime: z.union([z.string().regex(TIME), z.literal('')]).optional(),
+    courtId: z.union([z.uuid(), z.literal('')]).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.time && !value.endTime) {
+      ctx.addIssue({ code: 'custom', path: ['endTime'], message: 'Indica la hora de fin.' });
+    } else if (value.endTime && !value.time) {
+      ctx.addIssue({ code: 'custom', path: ['time'], message: 'Indica la hora de inicio.' });
+    } else if (value.time && value.endTime && value.endTime <= value.time) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['endTime'],
+        message: 'La hora de fin debe ser posterior a la de inicio.',
+      });
+    }
+  });
 
 export type BracketSlotInput = z.infer<typeof bracketSlotSchema>;
 

@@ -21,6 +21,13 @@ function refresh(): void {
   revalidatePath('/admin/llaves');
 }
 
+/** `settings.event_starts_at` → solo la fecha (YYYY-MM-DD), en hora local. */
+function dateOnly(iso: string): string {
+  const date = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 export async function createBracketAction(
   _prev: ActionState,
   formData: FormData,
@@ -53,6 +60,21 @@ export async function createBracketAction(
   }
 
   const supabase = await createClient();
+
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('event_starts_at')
+    .single();
+
+  if (!settings?.event_starts_at) {
+    return {
+      errors: {
+        _: 'Configura primero la fecha del evento en Configuración: todas las llaves se juegan ese día.',
+      },
+    };
+  }
+
+  const eventDate = dateOnly(settings.event_starts_at);
 
   const { data: existing } = await supabase
     .from('brackets')
@@ -99,6 +121,9 @@ export async function createBracketAction(
     team_a_slot: slot.teamASlot,
     team_b_slot: slot.teamBSlot,
     is_bye: slot.isBye,
+    // Todo el torneo se juega el día del evento; solo falta la hora y la
+    // cancha de cada casilla.
+    starts_on: eventDate,
     // Un bye no se juega: ya se sabe quién "gana" sin marcador.
     status: slot.isBye ? ('finished' as const) : ('scheduled' as const),
   }));
@@ -157,7 +182,7 @@ export async function createBracketAction(
   });
 
   refresh();
-  return { ok: true, message: `Molde creado: ${mold.length} casilla(s). Ahora asígnales cancha, fecha y hora.` };
+  return { ok: true, message: `Molde creado: ${mold.length} casilla(s). Ahora asígnales cancha y hora.` };
 }
 
 export async function deleteBracketAction(formData: FormData): Promise<void> {
@@ -186,8 +211,8 @@ export async function updateBracketSlotAction(
 
   const parsed = bracketSlotSchema.safeParse({
     scheduleId: formData.get('scheduleId'),
-    date: formData.get('date') ?? '',
     time: formData.get('time') ?? '',
+    endTime: formData.get('endTime') ?? '',
     courtId: formData.get('courtId') ?? '',
   });
 
@@ -198,18 +223,18 @@ export async function updateBracketSlotAction(
   const { error } = await supabase
     .from('schedules')
     .update({
-      starts_on: input.date || null,
       starts_at: input.time || null,
+      ends_at: input.endTime || null,
       court_id: input.courtId || null,
     })
     .eq('id', input.scheduleId);
 
   if (error) {
-    const duplicated = error.message.includes('schedules_court_time_unique');
+    const overlap = error.message.includes('schedules_court_no_overlap');
     return {
       errors: {
-        _: duplicated
-          ? 'Ya hay otro partido en esa cancha, a esa misma fecha y hora.'
+        _: overlap
+          ? 'Ese horario se cruza con otro partido ya programado en esa cancha.'
           : error.message,
       },
     };

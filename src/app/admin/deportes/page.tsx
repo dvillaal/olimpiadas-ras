@@ -16,14 +16,18 @@ export default async function AdminSportsPage() {
     { data: branches },
     { data: sportBranches },
     { data: teams },
+    { data: teamMembers },
     { data: individualRegistrations },
+    { data: individualRegistrationParticipants },
     { data: schedules },
   ] = await Promise.all([
     supabase.from('sports').select('*').order('sort_order').order('name'),
     supabase.from('branches').select('*').eq('active', true).order('sort_order'),
     supabase.from('sport_branches').select('*'),
-    supabase.from('teams').select('sport_id, status'),
-    supabase.from('individual_registrations').select('sport_id'),
+    supabase.from('teams').select('id, sport_id, status'),
+    supabase.from('team_members').select('team_id'),
+    supabase.from('individual_registrations').select('id, sport_id, status'),
+    supabase.from('individual_registration_participants').select('registration_id'),
     supabase.from('schedules').select('sport_id'),
   ]);
 
@@ -34,10 +38,30 @@ export default async function AdminSportsPage() {
 
   const branchName = new Map((branches ?? []).map((b) => [b.id, b.name]));
 
+  // Cuántas PERSONAS quedan inscritas por deporte (no equipos): el mismo
+  // cálculo que /admin/reportes, para que ambas pantallas coincidan. Antes
+  // esta sección mostraba la cantidad de equipos bajo la etiqueta
+  // "Inscritos" (y para deportes individuales, que no tienen equipos,
+  // siempre salía en 0).
   const teamsBySport = new Map<string, number>();
+  const athletesBySport = new Map<string, number>();
+
   for (const team of teams ?? []) {
     if (team.status === 'rejected' || team.status === 'cancelled') continue;
     teamsBySport.set(team.sport_id, (teamsBySport.get(team.sport_id) ?? 0) + 1);
+    const roster = (teamMembers ?? []).filter((m) => m.team_id === team.id).length;
+    athletesBySport.set(team.sport_id, (athletesBySport.get(team.sport_id) ?? 0) + roster);
+  }
+
+  for (const registration of individualRegistrations ?? []) {
+    if (registration.status === 'rejected' || registration.status === 'cancelled') continue;
+    const count = (individualRegistrationParticipants ?? []).filter(
+      (link) => link.registration_id === registration.id,
+    ).length;
+    athletesBySport.set(
+      registration.sport_id,
+      (athletesBySport.get(registration.sport_id) ?? 0) + count,
+    );
   }
 
   // Un deporte solo se puede eliminar si nada depende de él: ni equipos, ni
@@ -68,6 +92,7 @@ export default async function AdminSportsPage() {
       (id) => branchName.get(id) ?? id,
     ),
     teamsCount: teamsBySport.get(sport.id) ?? 0,
+    athletesCount: athletesBySport.get(sport.id) ?? 0,
     deletable:
       !sportsWithTeams.has(sport.id) &&
       !sportsWithIndividuals.has(sport.id) &&

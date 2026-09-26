@@ -1,12 +1,37 @@
 'use client';
 
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState, useMemo, useState, type ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
 import { createBracketAction } from './actions';
 import type { ActionState } from '@/app/(auth)/actions';
 import { Alert, Button, Field } from '@/components/ui';
 import { useActionResult } from '@/lib/hooks/use-action-result';
 import type { BracketFormat } from '@/types/database';
+
+/** Encabezado plegable: el formulario queda oculto hasta que se necesita. */
+export function BracketCreatorAccordion({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="panel !p-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+      >
+        <div>
+          <h3 className="text-lg font-bold text-navy">Generar molde</h3>
+          <p className="mt-1 text-sm text-slate-500">Define el formato y cuántos equipos entran.</p>
+        </div>
+        <span className="text-xl text-slate-400" aria-hidden>
+          {open ? '▾' : '▸'}
+        </span>
+      </button>
+      {open && <div className="border-t border-line px-5 py-4">{children}</div>}
+    </div>
+  );
+}
 
 export interface SportOption {
   id: string;

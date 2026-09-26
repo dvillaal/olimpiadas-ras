@@ -240,6 +240,7 @@ type Schedule = {
   label: string;
   starts_on: string | null;
   starts_at: string | null;
+  ends_at: string | null;
   venue: string;
   court_id: string | null;
   referee_id: string | null;

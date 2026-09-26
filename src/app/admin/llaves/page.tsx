@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { requireAdmin } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
-import { Alert, EmptyState, PageHeader, Panel } from '@/components/ui';
-import { BracketCreator, type SportOption } from './bracket-creator';
+import { Alert, EmptyState, PageHeader } from '@/components/ui';
+import { BracketCreator, BracketCreatorAccordion, type SportOption } from './bracket-creator';
 import { BracketPanel, type BracketSummary, type RoundGroup } from './bracket-panel';
+import type { TreeRound } from './bracket-tree';
 
 export const metadata: Metadata = { title: 'Llaves' };
 
@@ -27,7 +28,7 @@ export default async function AdminBracketsPage() {
     supabase
       .from('schedules')
       .select(
-        'id, bracket_id, round_number, round_name, bracket_slot, group_label, team_a_slot, team_b_slot, is_bye, starts_on, starts_at, court_id',
+        'id, bracket_id, round_number, round_name, bracket_slot, group_label, team_a_slot, team_b_slot, is_bye, starts_on, starts_at, ends_at, court_id',
       )
       .not('bracket_id', 'is', null)
       .order('round_number')
@@ -66,7 +67,42 @@ export default async function AdminBracketsPage() {
 
   const sportById = new Map((sports ?? []).map((s) => [s.id, s]));
   const branchById = new Map((branches ?? []).map((b) => [b.id, b]));
+  const bracketById = new Map((brackets ?? []).map((b) => [b.id, b]));
   const courtOptions = (courts ?? []).map((c) => ({ id: c.id, name: c.name }));
+  const courtNameById = new Map((courts ?? []).map((c) => [c.id, c.name]));
+
+  // Árbol de llaves: solo la parte de eliminación directa (rondas que se
+  // alimentan una a otra) tiene sentido dibujarla así. La liga se queda con
+  // la lista de casillas de abajo.
+  const treeRoundsByBracket = new Map<string, TreeRound[]>();
+  const treeRoundByKey = new Map<string, TreeRound>();
+  for (const row of schedules ?? []) {
+    if (!row.bracket_id || row.round_number === null || row.group_label !== '') continue;
+    if (bracketById.get(row.bracket_id)?.format === 'round_robin') continue;
+
+    const key = `${row.bracket_id}:${row.round_number}`;
+    let round = treeRoundByKey.get(key);
+    if (!round) {
+      round = { roundNumber: row.round_number, roundName: row.round_name, matches: [] };
+      treeRoundByKey.set(key, round);
+      treeRoundsByBracket.set(row.bracket_id, [
+        ...(treeRoundsByBracket.get(row.bracket_id) ?? []),
+        round,
+      ]);
+    }
+    round.matches.push({
+      id: row.id,
+      isBye: row.is_bye,
+      teamADesc:
+        row.team_a_slot !== null ? `Posición ${row.team_a_slot}` : row.is_bye ? '' : 'Por definir',
+      teamBDesc:
+        row.team_b_slot !== null ? `Posición ${row.team_b_slot}` : row.is_bye ? '' : 'Por definir',
+      startsOn: row.starts_on,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+      courtName: row.court_id ? (courtNameById.get(row.court_id) ?? null) : null,
+    });
+  }
 
   const roundsByBracket = new Map<string, RoundGroup>();
   const roundGroupsByBracket = new Map<string, RoundGroup[]>();
@@ -91,6 +127,7 @@ export default async function AdminBracketsPage() {
       isBye: row.is_bye,
       startsOn: row.starts_on,
       startsAt: row.starts_at,
+      endsAt: row.ends_at,
       courtId: row.court_id,
     });
   }
@@ -115,9 +152,16 @@ export default async function AdminBracketsPage() {
         .slice()
         .sort((a, b) => a.roundNumber - b.roundNumber);
 
-      return { summary, rounds };
+      const treeRounds = (treeRoundsByBracket.get(bracket.id) ?? [])
+        .slice()
+        .sort((a, b) => a.roundNumber - b.roundNumber);
+
+      return { summary, rounds, treeRounds };
     })
-    .filter((b): b is { summary: BracketSummary; rounds: RoundGroup[] } => b !== null);
+    .filter(
+      (b): b is { summary: BracketSummary; rounds: RoundGroup[]; treeRounds: TreeRound[] } =>
+        b !== null,
+    );
 
   return (
     <>
@@ -133,24 +177,28 @@ export default async function AdminBracketsPage() {
         </Alert>
       )}
 
-      <div className="grid gap-5 xl:grid-cols-[400px_minmax(0,1fr)]">
-        <Panel title="Generar molde" description="Define el formato y cuántos equipos entran.">
+      <div className="space-y-5">
+        <BracketCreatorAccordion>
           <BracketCreator sports={sportOptions} branches={branches ?? []} teamCounts={teamCounts} />
-        </Panel>
+        </BracketCreatorAccordion>
 
-        <div className="space-y-5">
-          {brandedBrackets.length === 0 ? (
-            <EmptyState
-              icon="🏆"
-              title="Todavía no hay ninguna llave"
-              description="Genera el molde de la primera con el formulario de la izquierda."
+        {brandedBrackets.length === 0 ? (
+          <EmptyState
+            icon="🏆"
+            title="Todavía no hay ninguna llave"
+            description="Genera el molde de la primera arriba."
+          />
+        ) : (
+          brandedBrackets.map(({ summary, rounds, treeRounds }) => (
+            <BracketPanel
+              key={summary.id}
+              bracket={summary}
+              rounds={rounds}
+              treeRounds={treeRounds}
+              courts={courtOptions}
             />
-          ) : (
-            brandedBrackets.map(({ summary, rounds }) => (
-              <BracketPanel key={summary.id} bracket={summary} rounds={rounds} courts={courtOptions} />
-            ))
-          )}
-        </div>
+          ))
+        )}
       </div>
     </>
   );

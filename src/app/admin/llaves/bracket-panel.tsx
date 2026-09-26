@@ -1,6 +1,7 @@
 import { deleteBracketAction } from './actions';
 import { Badge, Button, Panel } from '@/components/ui';
 import { BracketSlotRow, type CourtOption, type SlotRow } from './bracket-slot-row';
+import { BracketTree, type TreeRound } from './bracket-tree';
 import type { BracketFormat, BracketStatus } from '@/types/database';
 
 const FORMAT_LABELS: Record<BracketFormat, string> = {
@@ -40,10 +41,12 @@ export interface RoundGroup {
 export function BracketPanel({
   bracket,
   rounds,
+  treeRounds,
   courts,
 }: {
   bracket: BracketSummary;
   rounds: RoundGroup[];
+  treeRounds: TreeRound[];
   courts: CourtOption[];
 }) {
   return (
@@ -63,6 +66,15 @@ export function BracketPanel({
       }
     >
       <div className="space-y-5">
+        {treeRounds.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-bold uppercase tracking-wide text-slate-500">
+              Árbol de la llave
+            </h4>
+            <BracketTree rounds={treeRounds} />
+          </div>
+        )}
+
         {rounds.map((round) => (
           <div key={round.roundNumber} className="space-y-2">
             <h4 className="text-sm font-bold uppercase tracking-wide text-slate-500">

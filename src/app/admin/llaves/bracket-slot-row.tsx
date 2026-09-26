@@ -16,6 +16,7 @@ export interface SlotRow {
   isBye: boolean;
   startsOn: string | null;
   startsAt: string | null;
+  endsAt: string | null;
   courtId: string | null;
 }
 
@@ -68,18 +69,7 @@ export function BracketSlotRow({ slot, courts }: { slot: SlotRow; courts: CourtO
       </div>
 
       <label className="text-sm">
-        <span className="field-label">Fecha</span>
-        <input
-          type="date"
-          name="date"
-          defaultValue={slot.startsOn ?? ''}
-          className="field-input"
-          disabled={slot.isBye}
-        />
-      </label>
-
-      <label className="text-sm">
-        <span className="field-label">Hora</span>
+        <span className="field-label">Hora inicio</span>
         <input
           type="time"
           name="time"
@@ -87,6 +77,19 @@ export function BracketSlotRow({ slot, courts }: { slot: SlotRow; courts: CourtO
           className="field-input"
           disabled={slot.isBye}
         />
+        {errors.time && <p className="field-error">{errors.time}</p>}
+      </label>
+
+      <label className="text-sm">
+        <span className="field-label">Hora fin</span>
+        <input
+          type="time"
+          name="endTime"
+          defaultValue={slot.endsAt ?? ''}
+          className="field-input"
+          disabled={slot.isBye}
+        />
+        {errors.endTime && <p className="field-error">{errors.endTime}</p>}
       </label>
 
       <label className="text-sm">
